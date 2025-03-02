@@ -8,10 +8,6 @@
   </h1>
 
   <p align="center">
-    一個功能強大的 Discord AI 助手，整合多種頂尖 AI 模型，提供智慧對話、圖片生成、多模態互動等功能
-  </p>
-
-  <p align="center">
     <img src="https://img.shields.io/github/stars/Javis603/Discord-AIBot?style=social" alt="Stars">
     <img src="https://img.shields.io/github/forks/Javis603/Discord-AIBot?style=social" alt="Forks">
     <img src="https://img.shields.io/github/issues/Javis603/Discord-AIBot" alt="Issues">
@@ -22,7 +18,7 @@
 
 ## 📖 關於本專案
 
-這是一個專為 Discord 設計的多功能 AI 助手，結合了最新的 AI 技術，為您的伺服器帶來前所未有的智慧互動體驗。透過多模型支援和多模態輸入，提供全方位的 AI 服務：
+這是一個專為 Discord 設計的多功能 AI 助手，整合 OpenAI、Gemini、Claude、DeepSeek 等頂尖 AI 模型，支持智能對話、多模態互動、圖片生成、聯網搜索和深度思考功能，為您的伺服器帶來前所未有的智能體驗：
 
 <div align="center">
   <p align="center">

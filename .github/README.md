@@ -8,10 +8,6 @@
   </h1>
 
   <p align="center">
-    A powerful Discord AI assistant that integrates multiple top AI models to provide intelligent conversation, image generation, multimodal interaction, and more.
-  </p>
-
-  <p align="center">
     <img src="https://img.shields.io/github/stars/Javis603/Discord-AIBot?style=social" alt="Stars">
     <img src="https://img.shields.io/github/forks/Javis603/Discord-AIBot?style=social" alt="Forks">
     <img src="https://img.shields.io/github/issues/Javis603/Discord-AIBot" alt="Issues">
@@ -22,7 +18,7 @@
 
 ## 📖 About This Project
 
-This is a multifunctional AI assistant designed for Discord, combining the latest AI technologies to bring unprecedented intelligent interaction to your server. With multi-model support and multimodal input, it provides comprehensive AI services:
+This is a multifunctional AI assistant designed for Discord, integrating top-tier AI models like OpenAI, Gemini, Claude, DeepSeek and more, offering intelligent conversations, multimodal interaction, image generation, web search and deep thinking capabilities to bring unprecedented AI experiences to your server:
 
 <div align="center">
   <p align="center">
