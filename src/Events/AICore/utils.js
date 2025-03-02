@@ -184,7 +184,10 @@ async function generatePredictedQuestions(message, response) {
       messages: [
           //{ role: 'system', content: '根據用戶與AI的聊天記錄，思考用戶上次詢問的場景、意圖、背景，以用戶的角度生成用戶接下來最有可能向AI（你）提出的問題。1.不要生成用戶可能已經知道答案或與當前話題無關的問題。2.始終生成用戶可能向AI提出的非常簡短清晰的問題（少於 15 個字），而不是AI向用戶提出的問題。3.切勿生成相同或相似的問題。其他要求：1.每次生成三個問題。2.必須嚴格遵從以下格式回應 {"question1": "你生成的第一個問題","question2": "你生成的第二個問題","question1": "你生成的第三個問題"}，無需輸出其他解釋。3.如果用戶的最新問題涉及創意任務（如想出一個標題），則至少給出一個問題，直接詢問如何增強AI之前答案的創意或吸引力。4.如果AI沒有回答或拒絕回答用戶的問題，則根據助手可以回答的內容生成建議，引導話題向更有成效的方向發展，而與當前話題無關。5.確保問題使用的語言與用戶和人工智能的對話一致。' },
           { role: 'system', content: getText('prompts.predictQuestions', null) },
-          { role: 'user', content: `這是用戶的問題："${message.content}"，這是AI的回覆："${response}"。以此推斷用戶想問AI的後續問題` } //這是用戶的問題："${message.content}"。
+          { role: 'user', content: getText('prompts.predictQuestionsUserPrompt', null, {
+            userQuestion: message.content,
+            aiResponse: response
+        }) }
       ],
       max_tokens: 250,
   });

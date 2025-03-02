@@ -758,7 +758,9 @@ module.exports = {
             {context}`,
             
         predictQuestions: `Based on the AI's response, predict three follow-up questions that the user might want to ask the AI, and generate these from the user's perspective/person. You need to provide very concise question suggestions (each question not exceeding 60 characters). Don't provide any other explanations, strictly respond in this format: {"question1": "Your first generated follow-up question", "question2": "Your second generated follow-up question", "question3": "Your third generated follow-up question"}. The language should match the language of the AI's response.`,
-            
+        
+        predictQuestionsUserPrompt: "This is the user's question: \"{{userQuestion}}\", and this is the AI's response: \"{{aiResponse}}\". Based on this, infer what follow-up questions the user might want to ask the AI",
+
         searchAnalysis: `You are a strict search requirement analyzer assistant. Based on the user's latest message, determine whether a web search is needed.
                 Please answer in JSON format. Format as follows:
                 {

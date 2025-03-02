@@ -758,7 +758,9 @@ module.exports = {
             {context}`,
             
         predictQuestions: `根據AI的回答，預測用戶可能想要問AI的後續問題，並以用戶的視角/人稱生成3個後續問題。您需要提出非常簡潔明了的問題建議（每個問題不超過60個字符）。您不需要輸出其他解釋，嚴格按照以下格式回答：{"question1": "您生成的第一個後續問題", "question2": "您生成的第二個後續問題", "question3": "您生成的第三個後續問題"}。語言應與AI回答的語言相匹配。`,
-            
+        
+        predictQuestionsUserPrompt: "這是用戶的問題：\"{{userQuestion}}\"，這是AI的回覆：\"{{aiResponse}}\"。以此推斷用戶想問AI的後續問題",
+        
         searchAnalysis: `您是嚴格的搜索需求分析助手。根據用戶的最新消息，判斷是否需要進行網絡搜索。
                 請以JSON格式回答。格式如下：
                 {
