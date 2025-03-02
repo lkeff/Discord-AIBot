@@ -1,14 +1,14 @@
 <p align="right">
-   <strong>中文</strong> | <a href="./README.en.md">English</a>
+   <strong>EN</strong> | <a href="./README.zh-CN.md">简</a> | <a href="./README.zh-TW.md">繁</a>
 </p>
 <div align="center">
   <h1>
-    <img src="assets\image\niba-icon.png" alt="你爸 AI Bot Logo" width="35" height="35" valign="bottom">
-    你爸 AI Bot
+    <img src="assets/image/niba-icon.png" alt="Niba AI Bot Logo" width="35" height="35" valign="bottom">
+    Niba AI Bot
   </h1>
 
   <p align="center">
-    一個功能強大的 Discord AI 助手，整合多種頂尖 AI 模型，提供智慧對話、圖片生成、多模態互動等功能
+    A powerful Discord AI assistant that integrates multiple top AI models to provide intelligent conversation, image generation, multimodal interaction, and more.
   </p>
 
   <p align="center">
@@ -18,213 +18,234 @@
     <img src="https://img.shields.io/github/license/Javis603/Discord-AIBot" alt="License">
     <a href="https://discord.gg/HmdNVVvw5P"><img src="https://img.shields.io/discord/1344259784219689031?color=5865F2&label=Discord&logo=discord&logoColor=white&style=flat-square" alt="Discord"></a>
   </p>
+</div>
 
+## 📖 About This Project
+
+This is a multifunctional AI assistant designed for Discord, combining the latest AI technologies to bring unprecedented intelligent interaction to your server. With multi-model support and multimodal input, it provides comprehensive AI services:
+
+<div align="center">
   <p align="center">
-    <a href="#-主要特點">功能特點</a> •
-    <a href="#️-技術特色">技術</a> •
-    <a href="#-開始使用">安裝</a> •
-    <a href="#️-配置說明">配置</a> •
-    <a href="#️-指令列表">指令</a> •
-    <a href="#-支援與反饋">支援</a> •
-    <a href="#-授權條款">授權</a>
+    <a href="https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=8&scope=bot%20applications.commands">
+      <img src="https://img.shields.io/badge/Invite%20Bot-7289DA?style=for-the-badge&logo=discord&logoColor=white" alt="Invite Bot">
+    </a>
+    <a href="https://discord.gg/HmdNVVvw5P">
+      <img src="https://img.shields.io/badge/Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Community">
+    </a>
   </p>
 </div>
 
-## 📖 關於本專案
+### 🌟 Features
+- **Multi-Model Support**: Integrates top AI models from OpenAI, Google AI, DeepSeek, and more, allowing flexible model switching.
+- **Real-Time Interaction**: Supports streaming responses for smooth real-time conversations.
+- **Smart Predictions**: AI-driven conversation prediction system automatically provides three most relevant response suggestions.
+- **Multimodal Capabilities**: Supports text, image, PDF, voice inputs, and more for comprehensive interaction.
+- **Highly Customizable**: Flexible role settings and model switching features to create a personalized AI assistant.
 
-這是一個專為 Discord 設計的多功能 AI 助手，結合了最新的 AI 技術，為您的伺服器帶來前所未有的智慧互動體驗。透過多模型支援和多模態輸入，提供全方位的 AI 服務：
+### 🌐 Multilingual Support
+- Full support for four languages:
+  - Traditional Chinese (zh-TW)
+  - Simplified Chinese (zh-CN)
+  - English (en-US)
+  - Japanese (ja-JP)
+- All system messages, command descriptions, and error prompts are localized.
+- Supports user personal language settings.
+- Supports server-wide language settings.
+- Uses standard language codes for easy expansion.
 
-### 🌟 主要特點
-- **多模型支援**：整合 OpenAI、Google AI、DeepSeek 等頂級 AI 模型，靈活切換不同模型
-- **即時互動**：支援串流式回應，實現流暢的即時對話體驗
-- **智慧預測**：AI 驅動的對話預測系統，自動提供三個最相關的回應建議
-- **多模態能力**：支援文字、圖片、PDF、語音等多種輸入方式，全方位互動
-- **高度客製化**：彈性的角色設定和模型切換功能，打造專屬 AI 助手
+### 🛠️ Technical Highlights
+- Modular architecture design for easy maintenance and expansion.
+- Complete multilingual localization system.
+- MongoDB data persistence to ensure data security.
+- Real-time event monitoring and logging.
+- Intelligent process management and automatic error recovery mechanism.
 
-### 🌐 多語言支援
-- 完整支援四種語言：
-  - 繁體中文 (zh-TW)
-  - 簡體中文 (zh-CN)
-  - 英文 (en-US)
-  - 日文 (ja-JP)
-- 所有系統訊息、指令說明和錯誤提示均已本地化
-- 支援使用者個人語言設定
-- 支援伺服器全局語言設定
-- 使用標準語言代碼，便於擴展
-
-### 🛠️ 技術特色
-- 模組化架構設計，易於維護和擴展
-- 完整的多語言本地化系統
-- MongoDB 資料持久化，確保資料安全
-- 即時事件監控和日誌記錄
-- 智能進程管理與自動錯誤恢復機制
-
-### 💬 AI 聊天功能
-- 支援多種 AI 模型靈活切換
-- 即時串流回應顯示
-- 智慧對話記憶功能
-- 智慧對話預測與互動按鈕
-- 多輪對話上下文理解
-- 編輯對話以重新回應 (Coming Soon)
+### 💬 AI Chat Features
+- Supports flexible switching between multiple AI models.
+- Real-time streaming response display.
+- Intelligent conversation memory function.
+- Smart conversation prediction with interactive buttons.
+- Multi-turn conversation context understanding.
+- Edit conversation to re-respond (Coming Soon).
 
 <div align="center">
-  <p><strong>🤖 對話示例：</strong></p>
-  <img src="assets\screenshots\AIchat.gif" alt="對話展示" width="1800" style="border-radius: 10px; margin: 10px 0;">
-  <p><sub>↑ AI 智慧預測三個最相關的回應選項，提升對話效率</sub></p>
+  <p><strong>🤖 Conversation Example:</strong></p>
+  <img src="assets\screenshots\en\AI-chat.gif" width="1800" style="border-radius: 10px; margin: 10px 0;">
+  <p><sub>↑ AI intelligently predicts three most relevant response options to enhance conversation efficiency</sub></p>
 </div>
 
-### 🧠 多模態互動
-- 語音輸入與辨識
-- 圖像理解與分析
-- PDF 文件解析與摘要
-- 深度思考模式
-- 網路搜尋增強
-- AI 圖像生成
+### 🧠 Multimodal Interaction
+- Voice input and recognition.
+- Image understanding and analysis.
+- PDF document parsing and summarization.
+- Deep thinking mode.
+- Enhanced web search.
+- AI image generation.
 
-### 🎨 AI 繪圖功能
-- 支援多種繪圖風格
-- 自動優化提示詞
-- 多尺寸圖像生成
+### 🎨 AI Drawing Features
+- Supports multiple drawing styles.
+- Automatic prompt optimization.
+- Multi-size image generation.
 
-### 📊 LLM 模型支援
+### 📊 LLM Model Support
 
-| 模型 | 狀態 | Base URL (僅支持 OpenAI 接口格式) |
+| Model | Status | Base URL (supports OpenAI API format only) |
 | --- | --- | --- |
 | [OpenAI](https://platform.openai.com/) | ✅ | https://api.openai.com/v1 |
 | [DeepSeek](https://www.deepseek.com/) | ✅ | https://api.deepseek.com/v1 |
 | [Google AI](https://ai.google.dev/) | ✅ | https://generativelanguage.googleapis.com/v1beta/openai/ |
 | [xAI](https://x.ai/) | ✅ | https://api.x.ai/v1 |
-| [Anthropic](https://www.anthropic.com/) | ✅ | 需使用中轉API |
-| 中轉API | ✅ | 推薦使用中轉API把所有模型轉成至OpenAI SDK格式 (e.g. one-api, new-api) |
+| [Anthropic](https://www.anthropic.com/) | ✅ | Requires proxy API |
+| Proxy API | ✅ | Recommended to use proxy API to convert all models to OpenAI SDK format (e.g., one-api, new-api) |
 
-### 🔧 實用工具
-- 訊息回收與管理
-- 對話紀錄管理（刪除/編輯）
-- 角色設定管理
-- 模型切換功能
-- 自動舊對話清理
+### 🔧 Utilities
+- Message recall and management.
+- Conversation record management (delete/edit).
+- Role setting management.
+- Model switching function.
+- Automatic old conversation cleanup.
 
-### ⚙️ 管理功能
-- 完整的指令重載系統
-- 用戶設定管理系統
-- MongoDB 資料庫整合
-- 詳細的事件日誌記錄
-- 權限管理系統
-- 頻道管理功能
+### ⚙️ Management Features
+- Complete command reload system.
+- User settings management system.
+- MongoDB database integration.
+- Detailed event logging.
+- Permission management system.
+- Channel management functions.
 
-## 🚀 開始使用
+## 🚀 Getting Started
 
-### 前置需求
-- Node.js 16.9.0 或更高版本
-- MongoDB 資料庫
-- Discord Bot Token
-- AI API Keys（支援多種服務商）
-- Tavily API Key（可選，用於網絡搜尋）
+### Prerequisites
+- Node.js 18.0.0 or higher
+- MongoDB database
+- [Discord Bot Token](https://discord.com/developers/applications)
+- AI API Keys (supports multiple providers)
+- Tavily API Key (optional, for web search)
 
-### 安裝步驟
+### Installation Steps
 
-1. **克隆專案**
+1. **Clone the repository**
 ```bash
 git clone https://github.com/Javis603/Discord-AIBot.git
 cd Discord-AIBot
 ```
 
-2. **安裝依賴**
+2. **Install dependencies**
 ```bash
 npm install
 ```
 
-3. **設定環境變數**
-   - 複製 `.env.example` 為 `.env`
-   - 填入必要的設定值：
+3. **Set environment variables**
+   - Copy .env.example to .env
+   - Fill in the necessary settings:
      - Discord Bot Token
      - MongoDB URI
      - API Keys
-     - 其他可選設定
+     - Other optional settings
 
-4. **啟動機器人**
+4. **Start the bot**
 ```bash
-# 正式環境
+# Production environment
 npm start
 
-# 開發環境
+# Development environment
 npm run dev
 ```
 
-## ⚙️ 配置說明
+## ⚙️ Configuration
 
-### 主要配置文件
-- `.env`：環境變數配置
-- `config.json`：機器人表情符號設定
-- `roles.yaml`：AI 角色設定（可自定義）
-- `models.json`：自定義切換模型指令中的AI模型
+### Main Configuration Files
+- .env: Environment variable configuration
+- config.json: Bot emoji settings
+- roles.yaml: AI role settings (customizable)
+- models.json: Developer AI model configuration
+- models-user.json: User AI model configuration
 
-### 自訂表情符號設定
+### Custom Emoji Settings
 
-1. 複製 `config.json.example` 為 `config.json`
-2. 在 `.github/assets/emojis` 中查看可用的表情符號
-3. 在 Discord 伺服器中新增需要的表情符號
-4. 取得表情符號 ID（在 Discord 中輸入 \\:表情符號:）
-5. 在 `config.json` 中更新對應的 ID
+1. Copy config.json.example to config.json
+2. Check available emojis in `.github/assets/emojis`
+3. Add required emojis to your Discord server
+4. Get emoji IDs (type \\:emoji: in Discord)
+5. Update corresponding IDs in config.json
 
-如果沒有設定自訂表情符號，機器人會自動使用 fallback 的通用表情符號。
+If custom emojis are not set, the bot will automatically use fallback generic emojis.
 
-需要的表情符號：
-- memory (預設: 💾)
-- clock (預設: ⏰)
-- update (預設: 🔄)
-- newchat (預設: 🆕)
-- cross (預設: ❌)
-- generating (預設: ⚙️)
-- search (預設: 🔍)
-- delete (預設: 🗑️)
+Required emojis:
+- memory (default: 💾)
+- clock (default: ⏰)
+- update (default: 🔄)
+- newchat (default: 🆕)
+- cross (default: ❌)
+- generating (default: ⚙️)
+- search (default: 🔍)
+- delete (default: 🗑️)
 
-## 🛠️ 指令列表
+## 🛠️ Commands
 
-| 指令 | 說明 | 權限 |
+| Command | Description | Permission |
 |------|------|------|
-| `@bot`<br>`↰回覆bot`<br>`/chat` | 與 AI 對話 | 一般用戶 |
-| `/ai role` | 設定 AI 角色 | 一般用戶 |
-| `/ai model` | 切換 AI 模型 | 一般用戶 |
-| `/ai chat clear` | 清除對話記錄 | 一般用戶 |
-| `/imagine` | 生成 AI 圖片 | 一般用戶 |
-| `/lang` | 個人語言設定 | 一般用戶 |
-| `/snipe`<br>`.snipe` | 查看刪除訊息 | 一般用戶 |
-| `/info` | 查看機器人資訊 | 一般用戶 |
-| `/help` | 查看指令列表 | 一般用戶 |
-| `/clear` | 清除訊息 | 管理員 |
-| `/restart` | 重啟機器人 | 開發者 |
-| `/reload command`<br>`/reload event` | 重載指令/事件 | 開發者 |
-| `/ai-admin model global` | 全局模型設定 | 管理員 |
-| `/ai-admin model user` | 用戶模型設定 | 管理員 |
-| `/ai-admin role user` | 用戶角色設定 | 管理員 |
+| `@bot`<br>`↰reply to bot`<br>`/chat` | Chat with AI | General User |
+| `/ai role` | Set AI role | General User |
+| `/ai model` | Switch AI model | General User |
+| `/ai chat clear` | Clear chat history | General User |
+| `/imagine` | Generate AI image | General User |
+| `/lang` | Personal language settings | General User |
+| `/snipe`<br>`.snipe` | View deleted messages | General User |
+| `/info` | View bot information | General User |
+| `/help` | View command list | General User |
+| `/clear` | Clear messages | Admin |
+| `/restart` | Restart bot | Developer |
+| `/reload command`<br>`/reload event` | Reload command/event | Developer |
+| `/ai-admin model global` | Global model settings | Admin |
+| `/ai-admin model user` | User model settings | Admin |
+| `/ai-admin role user` | User role settings | Admin |
 
-### 📸 更多截圖
+### 📸 More Screenshots
 
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="assets/screenshots/deepthink.png" alt="深度思考功能展示" width="100%" style="border-radius: 10px;">
-      <p><sub>深度思考功能展示</sub></p>
+      <img src="assets/screenshots/en/deepthink.png" alt="Deep Thinking Feature" width="100%" style="border-radius: 10px;">
+      <p><sub>Deep Thinking Feature</sub></p>
     </td>
     <td align="center" width="50%">
-      <img src="assets/screenshots/generate_image.png" alt="AI圖像生成功能" width="100%" style="border-radius: 10px;">
-      <p><sub>AI圖像生成功能</sub></p>
+      <img src="assets/screenshots/en/generate_image.png" alt="AI Image Generation" width="100%" style="border-radius: 10px;">
+      <p><sub>AI Image Generation</sub></p>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screenshots/en/net_search.png" alt="Web Search Feature" width="100%" style="border-radius: 10px;">
+      <p><sub>Web Search Feature</sub></p>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/screenshots/en/ai_command.png" alt="lang&ai Commands" width="100%" style="border-radius: 10px;">
+      <p><sub>/language, /ai Commands</sub></p>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screenshots/en/info_command.png" alt="clear&info&ping Commands" width="100%" style="border-radius: 10px;">
+      <p><sub>/clear, /info, /ping Commands</sub></p>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/screenshots/en/snipe_command.png" alt="snipe Command" width="100%" style="border-radius: 10px;">
+      <p><sub>/snipe, .snipe</sub></p>
     </td>
   </tr>
 </table>
 
+## 🤝 Support and Feedback
 
-## 📝 授權條款
+If you have any questions or suggestions, feel free to:
+- [Submit Issues](https://github.com/Javis603/Discord-AIBot/issues)
+- [Join the Discord Community](https://discord.gg/HmdNVVvw5P)
 
-此專案使用 MIT 授權條款 - 查看 [LICENSE](LICENSE) 文件了解更多
+## 📝 License
 
-## 🤝 支援與反饋
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-如果您有任何問題或建議，歡迎：
-- [提交 Issues](https://github.com/Javis603/Discord-AIBot/issues)
-- [加入 Discord 社群](https://discord.gg/HmdNVVvw5P)
+## 📜 Changelog
 
-## 📜 更新日誌
-
-請查看 [CHANGELOG.md](CHANGELOG.md) 了解詳細更新記錄
+See [CHANGELOG.md](CHANGELOG.md) for detailed update records.
