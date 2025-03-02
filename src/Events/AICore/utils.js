@@ -510,8 +510,8 @@ async function imagineResponse(result, message1, user, client, conversationLog, 
     }*/
     let model = result.model;
 
-    let modelGroup = modelGroups.find(group => group.models.includes(modelToUse));
-    let iconURL = modelGroup ? modelGroup.iconURL : client.user.avatarURL({ dynamic: true, size: 512 });
+    const modelGroupInfo = getModelGroup(modelToUse);
+    let iconURL = modelGroupInfo.iconURL || client.user.avatarURL({ dynamic: true, size: 512 });
     embed.setFooter({ text: `你爸AI  •  Image Generator  |  model: ${model}`, iconURL: iconURL });
 
     const questionPredictions = await generatePredictedQuestions(message1, result.description);

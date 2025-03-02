@@ -17,7 +17,7 @@ module.exports = {
         const defaultLanguage = process.env.BOT_LANG || 'zh-TW';
         console.log(getText('events.botReady', defaultLanguage));
 
-        const currentUsername = client.user.username;
+        /*const currentUsername = client.user.username;
         const currentAvatarURL = client.user.avatarURL();
 
         if (currentUsername !== '你爸') {
@@ -28,7 +28,7 @@ module.exports = {
         client.user.setAvatar('https://cdn.discordapp.com/avatars/1058987480864530554/17f2256428480cfedd280dcce929ec2d.webp')
             .then(() => console.log('頭像設定成功'))
             .catch(console.error);
-        }
+        }*/
         
         let activityIndex = 0;
 

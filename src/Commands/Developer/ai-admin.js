@@ -15,7 +15,7 @@ if (process.env.DEFAULT_MODEL) {
 const roles = yaml.load(fs.readFileSync('./roles.yaml', 'utf8'));
 const UserSettings = require('../../Models/UserSettings');
 const { getText } = require('../../Functions/i18n');
-const { modelGroups, specialUsers } = require('../../Events/AICore/models');
+const { modelGroups, specialUsers, getModelGroup } = require('../../Events/AICore/models');
 const { webhookLog } = require('../../Events/AICore/utils');
 
 const contextObj = {
@@ -121,8 +121,8 @@ module.exports = {
             if (selectedModel || selectedModelKey === 'default') {
                 client.globalModel = selectedModelKey;
                 
-                let modelGroup = modelGroups.find(group => group.models.includes(models[selectedModelKey]));
-                let iconURL = modelGroup ? modelGroup.iconURL : client.user.avatarURL({ dynamic: true, size: 512 });
+                const modelName = models[selectedModelKey];
+                const { name: groupName, iconURL } = getModelGroup(modelName);
                     
                 const embed = new EmbedBuilder()
                     .setColor(interaction.member.displayHexColor)
@@ -160,8 +160,8 @@ module.exports = {
                         client.userModels[targetUser.id] = selectedModelKey;
                     }
 
-                    let modelGroup = modelGroups.find(group => group.models.includes(models[selectedModelKey]));
-                    let iconURL = modelGroup ? modelGroup.iconURL : client.user.avatarURL({ dynamic: true, size: 512 });
+                    const modelName = models[selectedModelKey];
+                    const { name: groupName, iconURL } = getModelGroup(modelName);
                     
                     const embed = new EmbedBuilder()
                         .setColor(interaction.member.displayHexColor)

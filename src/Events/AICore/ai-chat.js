@@ -30,10 +30,7 @@ const openai = new OpenAI({
     baseURL: process.env.DEFAULT_BASE_URL
 });
 
-const {
-    specialModels,
-    modelGroups
-} = require('./models');
+const { specialModels } = require('./models');
 
 const { 
     sendSplitMessages, 
