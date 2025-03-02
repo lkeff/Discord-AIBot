@@ -261,6 +261,11 @@ async function handleTextMessage(message, conversationLog, messageContent, clien
     const typingInterval = setInterval(() => {
         message.channel.sendTyping();
     }, 4000);
+
+    if (!Array.isArray(conversationLog)) {
+        conversationLog = [];
+        client.userConversations[message.author.id] = conversationLog;
+    }
     
     conversationLog.push({
         role: 'user',
@@ -294,8 +299,12 @@ module.exports = {
   async execute(message, client) {
     if (message.author.bot || message.interaction) return;
     if (message.mentions.has(client.user) && !message.mentions.everyone || replyChannels.includes(message.channel.id)) {
+        if (!client.userConversations) {
+            client.userConversations = {};
+        }
+        
         if (!client.userConversations[message.author.id]) {
-            await updateUserSystemPrompt(message, message.author.id, client);
+            await updateUserSystemPrompt(message.author.id, message, client);
         }
         
         let conversationLog = client.userConversations[message.author.id];

@@ -148,7 +148,7 @@ const deepThinkingStatus = client.userDeepThinkingEnabled.get(userId)
     ? "開啟" 
     : "關閉，需要用戶在多功能選單裏面打開";
     
-    const systemContent = roles[userSettings?.model]
+    const systemContent = roles[userSettings?.model || 'default']
         .replace(/{username}/g, userConfig.username)
         .replace(/{relation}/g, userConfig.relation)
         .replace(/{WebSerach}/g, webSearchStatus)
