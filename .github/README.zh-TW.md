@@ -70,7 +70,7 @@
 
 <div align="center">
   <p><strong>🤖 對話示例：</strong></p>
-  <img src="assets\screenshots\zh\AI-chat.gif" alt="對話展示" width="1800" style="border-radius: 10px; margin: 10px 0;">
+  <img src="assets/screenshots/zh/AI-chat.gif" alt="對話展示" width="1800" style="border-radius: 10px; margin: 10px 0;">
   <p><sub>↑ AI 智慧預測三個最相關的回應選項，提升對話效率</sub></p>
 </div>
 

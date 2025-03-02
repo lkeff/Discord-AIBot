@@ -70,7 +70,7 @@ This is a multifunctional AI assistant designed for Discord, combining the lates
 
 <div align="center">
   <p><strong>🤖 Conversation Example:</strong></p>
-  <img src="assets\screenshots\en\AI-chat.gif" width="1800" style="border-radius: 10px; margin: 10px 0;">
+  <img src="assets/screenshots/en/AI-chat.gif" width="1800" style="border-radius: 10px; margin: 10px 0;">
   <p><sub>↑ AI intelligently predicts three most relevant response options to enhance conversation efficiency</sub></p>
 </div>
 
