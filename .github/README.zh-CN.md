@@ -70,7 +70,7 @@
 
 <div align="center">
   <p><strong>🤖 对话示例：</strong></p>
-  <img src="assets/screenshots/zh/AI-chat.gif" alt="对话展示" width="1800" style="border-radius: 10px; margin: 10px 0;">
+  <img src="https://github.com/Javis603/Discord-AIBot/blob/main/.github/assets/screenshots/zh/ai-chat.gif" alt="对话展示" width="1800" style="border-radius: 10px; margin: 10px 0;">
   <p><sub>↑ AI 智能预测三个最相关的回应选项，提升对话效率</sub></p>
 </div>
 
