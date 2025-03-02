@@ -1,0 +1,15 @@
+.DS_Store
+node_modules/
+.env
+config.json
+backup/
+ecosystem.config.js
+package-lock.json
+
+src/Commands/not-for-git/
+src/Events/not-for-git/
+
+Procfile
+todo.txt
+rolesPlay.yaml
+roles-save.yaml
