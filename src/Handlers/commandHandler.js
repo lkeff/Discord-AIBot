@@ -86,7 +86,7 @@ function loadCommands(client) {
 
   client.application.commands.set(commandsArray)
     .then(() => {
-      console.log(getText('events.commandReload', defaultLanguage));
+      //console.log(getText('events.commandReload', defaultLanguage));
     })
     .catch(error => {
       console.error(`Error setting global commands: ${error.message}`);

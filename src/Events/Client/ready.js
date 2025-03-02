@@ -75,7 +75,7 @@ module.exports = {
             } else {
               //console.log(`Channel with ID ${channelId} was not found.`);
             }
-        }, 6000);
+        }, 8000);
 
         //console.log(`${client.user.tag} is ready!`)
     }

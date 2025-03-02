@@ -55,7 +55,7 @@ const summaryModel = process.env.SUMMARY_MODEL || process.env.DEFAULT_MODEL;
 const deepThinkingModel = process.env.DEEP_THINKING_MODEL;
 
 async function webhookLog(logMessage, functionName) {
-    const webhookClient = new WebhookClient({url: process.env.USAGE_LOGS});
+    //const webhookClient = new WebhookClient({url: process.env.USAGE_LOGS});
 
     const m = new EmbedBuilder()
     .setAuthor({ name: `Function: ${functionName}` })
