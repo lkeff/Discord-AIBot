@@ -31,6 +31,11 @@
   </p>
 </div>
 
+<div>
+  <img src="https://github.com/Javis603/Discord-AIBot/blob/main/.github/assets/screenshots/zh/ai-chat.gif" width="100%" style="border-radius: 10px; margin: 10px 0;">
+  <p align="center"><sub>↑ AI 智慧預測三個最相關的回應選項，提升對話效率</sub></p>
+</div>
+
 ### 🌟 主要特點
 - **多模型支援**：整合 OpenAI、Google AI、DeepSeek 等頂級 AI 模型，靈活切換不同模型
 - **即時互動**：支援串流式回應，實現流暢的即時對話體驗
@@ -63,12 +68,6 @@
 - 智慧對話預測與互動按鈕
 - 多輪對話上下文理解
 - 編輯對話以重新回應 (Coming Soon)
-
-<div align="center">
-  <p><strong>🤖 對話示例：</strong></p>
-  <img src="https://github.com/Javis603/Discord-AIBot/blob/main/.github/assets/screenshots/zh/ai-chat.gif" alt="對話展示" width="1800" style="border-radius: 10px; margin: 10px 0;">
-  <p><sub>↑ AI 智慧預測三個最相關的回應選項，提升對話效率</sub></p>
-</div>
 
 ### 🧠 多模態互動
 - 語音輸入與辨識

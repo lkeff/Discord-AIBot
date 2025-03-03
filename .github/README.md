@@ -31,6 +31,11 @@ This is a multifunctional AI assistant designed for Discord, integrating top-tie
   </p>
 </div>
 
+<div>
+  <img src="https://github.com/Javis603/Discord-AIBot/blob/main/.github/assets/screenshots/en/ai-chat.gif" width="100%" style="border-radius: 10px; margin: 10px 0;">
+  <p align="center"><sub>↑ AI intelligently predicts three most relevant response options to enhance conversation efficiency</sub></p>
+</div>
+
 ### 🌟 Features
 - **Multi-Model Support**: Integrates top AI models from OpenAI, Google AI, DeepSeek, and more, allowing flexible model switching.
 - **Real-Time Interaction**: Supports streaming responses for smooth real-time conversations.
@@ -63,12 +68,6 @@ This is a multifunctional AI assistant designed for Discord, integrating top-tie
 - Smart conversation prediction with interactive buttons.
 - Multi-turn conversation context understanding.
 - Edit conversation to re-respond (Coming Soon).
-
-<div align="center">
-  <p><strong>🤖 Conversation Example:</strong></p>
-  <img src="https://github.com/Javis603/Discord-AIBot/blob/main/.github/assets/screenshots/en/ai-chat.gif" width="1800" style="border-radius: 10px; margin: 10px 0;">
-  <p><sub>↑ AI intelligently predicts three most relevant response options to enhance conversation efficiency</sub></p>
-</div>
 
 ### 🧠 Multimodal Interaction
 - Voice input and recognition.
