@@ -58,7 +58,8 @@ const specialModelsSet = new Set([
     // Other Vision Models
     "perplexity-online-vision",
     "qwen-vl-plus",
-    "qwen-vl-max"
+    "qwen-vl-max",
+    "grok-2-vision",
 ]);
 
 if (process.env.IMAGE_MODEL) {
@@ -80,7 +81,7 @@ const modelPrefixes = {
 
 const modelGroupIcons = {
     openai: 'https://cdn.discordapp.com/attachments/1231229589917794435/1231229618439196782/IMG_2043.PNG?ex=663632f0&is=6623bdf0&hm=1554a2ea81fcd0ef6fc202255d29fb7bb6eef573ba540571d7e971cf8036edc2&=&quality=lossless',
-    anthropic: 'https://cdn.discordapp.com/attachments/1231229589917794435/1231230863811805255/IMG_2045.PNG?ex=66363419&is=6623bf19&hm=098d246d0a57c3115cf8b6605b707a75aa59f66a742b353e889b69315b8e92b1&=&quality=lossless',
+    anthropic: 'https://cdn.discordapp.com/attachments/1231229589917794435/1346009742241435738/IMG_6288.png?ex=67c6a0c2&is=67c54f42&hm=a7e3e09dc318c7459794481ea97cc82612a0a3b2ed55fce7a62e72f21771e304&=&quality=lossless',
     googleAi: 'https://cdn.discordapp.com/attachments/1231229589917794435/1231231968117784726/IMG_2047.PNG?ex=66363520&is=6623c020&hm=55396292b903cc9f8d83a940b897c92889aab790a37a6d2bacb01eaca28c9e64&=&quality=lossless',
     metaAi: 'https://cdn.discordapp.com/attachments/1231229589917794435/1234786379909697536/com-crop-unscreen.gif?ex=67b598ee&is=67b4476e&hm=88413a1f24bffc20a6cb7270e1aa78419d857fe8e3c4a2ba0e55930cb6c19cce&=&quality=lossless',
     cohere: 'https://cdn.discordapp.com/attachments/1231229589917794435/1234793607769096192/IMG_2275.png?ex=663206a9&is=6630b529&hm=e37a6d41fb8db5ec931c109b0bec4a3326b13aa085f90a8ded56e391abed918c&=&quality=lossless',
