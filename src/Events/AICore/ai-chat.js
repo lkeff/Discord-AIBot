@@ -32,10 +32,8 @@ const openai = new OpenAI({
 
 const { specialModels } = require('./models');
 
-const { 
-    sendSplitMessages, 
+const {
     updateUserSystemPrompt,
-    generatePredictedQuestions, 
     sendStreamingResponse,
     getModelForUser,
     handleConversationSummary,
@@ -99,7 +97,7 @@ async function handleAudioAttachment(message, audioAttachment, conversationLog, 
         const currentMessageTokens = encodeChat([{ role: 'user', content: transcription.text }], 'gpt-3.5-turbo').length;
         
         if (totalTokens + currentMessageTokens >= MAX_TOKENS) {
-            conversationLog = await handleConversationSummary(conversationLog, message);
+            conversationLog = await handleConversationSummary(conversationLog, message, null, message.author.id);
         }
 
         await sendStreamingResponse(message, message.channel, conversationLog, modelToUse, message.author, client);
@@ -135,7 +133,7 @@ async function handlePdfAndImageAttachments(message, pdfAttachments, imageAttach
         const currentMessageTokens = encodeChat([{ role: 'user', content: messageContent }], 'gpt-3.5-turbo').length;
 
         if (totalTokens + currentMessageTokens >= MAX_TOKENS) {
-            conversationLog = await handleConversationSummary(conversationLog, message);
+            conversationLog = await handleConversationSummary(conversationLog, message, null, message.author.id);
         }
 
         await sendStreamingResponse(message, message.channel, conversationLog, imageModel, message.author, client, false, null, pdfAttachments, imageAttachments);
@@ -178,7 +176,7 @@ async function handlePdfAttachmentsOnly(message, pdfAttachments, conversationLog
         const currentMessageTokens = encodeChat([{ role: 'user', content: messageContent }], 'gpt-3.5-turbo').length;
 
         if (totalTokens + currentMessageTokens >= MAX_TOKENS) {
-            conversationLog = await handleConversationSummary(conversationLog, message);
+            conversationLog = await handleConversationSummary(conversationLog, message, null, message.author.id);
         }
         
         const modelToUse = getModelForUser(message.author.id, client);
@@ -227,7 +225,7 @@ async function handleImageAttachments(message, imageAttachments, conversationLog
         const currentMessageTokens = encodeChat([{ role: 'user', content: messageContent }], 'gpt-3.5-turbo').length;
 
         if (totalTokens + currentMessageTokens >= MAX_TOKENS) {
-            conversationLog = await handleConversationSummary(conversationLog, message, attachmentContents);
+            conversationLog = await handleConversationSummary(conversationLog, message, attachmentContents, message.author.id);
         }
 
         await sendStreamingResponse(message, message.channel, conversationLog, imageModel, message.author, client);
@@ -280,7 +278,7 @@ async function handleTextMessage(message, conversationLog, messageContent, clien
         const currentMessageTokens = encodeChat([{ role: 'user', content: messageContent }], 'gpt-3.5-turbo').length;
 
         if (totalTokens + currentMessageTokens >= MAX_TOKENS) {
-            conversationLog = await handleConversationSummary(conversationLog, message);
+            conversationLog = await handleConversationSummary(conversationLog, message, null, message.author.id);
         }
 
         await sendStreamingResponse(message, message.channel, conversationLog, modelToUse, message.author, client);

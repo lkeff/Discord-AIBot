@@ -371,7 +371,7 @@ async function handlePredictedButton(interaction, client, index, userId) {
         userConversation = await handleConversationSummary(userConversation, {
             content: question,
             author: interaction.user
-        });
+        }, null, userId);
     }
 
     userConversation.push({

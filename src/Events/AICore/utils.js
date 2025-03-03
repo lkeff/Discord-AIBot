@@ -171,7 +171,12 @@ const deepThinkingStatus = client.userDeepThinkingEnabled.get(userId)
     return client.userConversations[userId];
 }
   
-async function generatePredictedQuestions(message, response) {
+async function generatePredictedQuestions(message, response, userID) {
+    const contextObj = {
+        userId: userID,
+        guildId: null
+    };
+    
   let questions = [];
 
   const openai = new OpenAI({
@@ -183,8 +188,8 @@ async function generatePredictedQuestions(message, response) {
       model: predictedModel,
       messages: [
           //{ role: 'system', content: '根據用戶與AI的聊天記錄，思考用戶上次詢問的場景、意圖、背景，以用戶的角度生成用戶接下來最有可能向AI（你）提出的問題。1.不要生成用戶可能已經知道答案或與當前話題無關的問題。2.始終生成用戶可能向AI提出的非常簡短清晰的問題（少於 15 個字），而不是AI向用戶提出的問題。3.切勿生成相同或相似的問題。其他要求：1.每次生成三個問題。2.必須嚴格遵從以下格式回應 {"question1": "你生成的第一個問題","question2": "你生成的第二個問題","question1": "你生成的第三個問題"}，無需輸出其他解釋。3.如果用戶的最新問題涉及創意任務（如想出一個標題），則至少給出一個問題，直接詢問如何增強AI之前答案的創意或吸引力。4.如果AI沒有回答或拒絕回答用戶的問題，則根據助手可以回答的內容生成建議，引導話題向更有成效的方向發展，而與當前話題無關。5.確保問題使用的語言與用戶和人工智能的對話一致。' },
-          { role: 'system', content: getText('prompts.predictQuestions', null) },
-          { role: 'user', content: getText('prompts.predictQuestionsUserPrompt', null, {
+          { role: 'system', content: getText('prompts.predictQuestions', contextObj) },
+          { role: 'user', content: getText('prompts.predictQuestionsUserPrompt', contextObj, {
             userQuestion: message.content,
             aiResponse: response
         }) }
@@ -222,7 +227,12 @@ async function generatePredictedQuestions(message, response) {
   return questions;
 }
 
-async function extractSearchQuery(conversationLog) {
+async function extractSearchQuery(conversationLog, userID) {
+    const contextObj = {
+        userId: userID,
+        guildId: null
+    };
+
     const currentDate = new Date().toISOString().split('T')[0];
     const filteredLog = conversationLog.filter(log => log.role !== 'system');
     
@@ -232,7 +242,7 @@ async function extractSearchQuery(conversationLog) {
             messages: [
                 {
                     role: 'system',
-                    content: getText('prompts.searchAnalysis', null, {
+                    content: getText('prompts.searchAnalysis', contextObj, {
                         currentDate: currentDate
                     })
                 },
@@ -348,7 +358,12 @@ async function formatSearchResults(searchResults, answer) {
     return formattedResults;
 }
 
-async function imagineCheck(conversationLog) {
+async function imagineCheck(conversationLog, userID) {
+    const contextObj = {
+        userId: userID,
+        guildId: null
+    };
+
     if (!GENERATE_IMAGE_ENABLED) {
         return 'NO_IMAGINE';
     }
@@ -370,7 +385,7 @@ async function imagineCheck(conversationLog) {
         messages: [
             {
                 role: 'system',
-                content: getText('prompts.imageCheck', null)
+                content: getText('prompts.imageCheck', contextObj)
             },
             ...filteredLog
         ],
@@ -414,13 +429,18 @@ async function imagineCheck(conversationLog) {
     }
 }
 
-async function imagineGenerate(prompt) {
+async function imagineGenerate(prompt, userID) {
+    const contextObj = {
+        userId: userID,
+        guildId: null
+    };
+
     const response = await openai.chat.completions.create({
         model: imaginePromptModel,
         messages: [
             {
                 role: 'system',
-                content: getText('prompts.imageGenerate', null)
+                content: getText('prompts.imageGenerate', contextObj)
             },
             {
                 role: 'user',
@@ -517,7 +537,7 @@ async function imagineResponse(result, message1, user, client, conversationLog, 
     let iconURL = modelGroupInfo.iconURL || client.user.avatarURL({ dynamic: true, size: 512 });
     embed.setFooter({ text: `你爸AI  •  Image Generator  |  model: ${model}`, iconURL: iconURL });
 
-    const questionPredictions = await generatePredictedQuestions(message1, result.description);
+    const questionPredictions = await generatePredictedQuestions(message1, result.description, user.id);
     const row = new ActionRowBuilder().addComponents(
         questionPredictions.map((question, index) =>
             new ButtonBuilder()
@@ -568,7 +588,7 @@ async function sendStreamingResponse(message1, channel, conversationLog, modelTo
 
     if (pdfAttachments && pdfAttachments.length > 0) {
         await lastMessage.edit({ content: getText('common.processingPdf', contextObj) });
-        const pdfContent = await handlePdfAttachments(pdfAttachments);
+        const pdfContent = await handlePdfAttachments(pdfAttachments, user.id);
         
         if (pdfAttachments.length > 0 && !imageAttachments) {
         conversationLog.push({
@@ -599,14 +619,14 @@ async function sendStreamingResponse(message1, channel, conversationLog, modelTo
     try {
     const isSearchEnabled = client.userNetSearchEnabled.get(user.id);
 
-    const imagineResult = await imagineCheck(conversationLog);
+    const imagineResult = await imagineCheck(conversationLog, user.id);
     if (imagineResult === 'NO_IMAGINE') {
         //await lastMessage.edit({ content: getText('events.AICore.normalQuestion', contextObj) });
         
     } else {
         // 處理圖片生成
         await lastMessage.edit({ content: getText('events.AICore.generatingImage', contextObj) });
-        const imageResult = await imagineGenerate(imagineResult);
+        const imageResult = await imagineGenerate(imagineResult, user.id);
         if (imageResult) {
             const response = await imagineResponse(imageResult, message1, user, client, conversationLog, modelToUse);
             await lastMessage.edit(response);
@@ -626,7 +646,7 @@ async function sendStreamingResponse(message1, channel, conversationLog, modelTo
         }
     }
         if (isSearchEnabled) {
-            const searchQuery = await extractSearchQuery(conversationLog);
+            const searchQuery = await extractSearchQuery(conversationLog, user.id);
         
             if (searchQuery === 'NO_SEARCH') {
                 //await lastMessage.edit({ content: '-# 💭 這是一般性問題，無需網路搜尋 <a:generating:1240296442950582292>' });
@@ -818,7 +838,7 @@ async function sendStreamingResponse(message1, channel, conversationLog, modelTo
         console.error('Error saving conversation:', error);
     }
     
-      const questionPredictions = await generatePredictedQuestions(message1, originalContent);
+      const questionPredictions = await generatePredictedQuestions(message1, originalContent, user.id);
     
       const row = new ActionRowBuilder().addComponents(
           questionPredictions.map((question, index) =>
@@ -913,7 +933,12 @@ function getModelForUser(userId, client) {
   }
 }
 
-async function handleConversationSummary(conversationLog, message, attachmentContents = null) {
+async function handleConversationSummary(conversationLog, message, attachmentContents = null, userID) {
+    const contextObj = {
+        userId: userID,
+        guildId: null
+    };
+    
     const systemLogs = conversationLog.filter(log => log.role === 'system');
     
     const chatLogs = conversationLog.filter(log => {
@@ -948,7 +973,7 @@ async function handleConversationSummary(conversationLog, message, attachmentCon
             //systemLogs[0],
             {
                 role: 'system',
-                content: getText('prompts.summarizeConversation', null, {
+                content: getText('prompts.summarizeConversation', contextObj, {
                     context: contextToSummarize
                 })
             }
@@ -983,7 +1008,12 @@ async function handleConversationSummary(conversationLog, message, attachmentCon
     return conversationLog;
 }
 
-async function handlePdfAttachments(pdfAttachments) {
+async function handlePdfAttachments(pdfAttachments, userID) {
+    const contextObj = {
+        userId: userID,
+        guildId: null
+    };
+
     let allContent = [];
     const maxPages = process.env.PDF_MAX_PAGES || 10;
     const maxCharacters = process.env.PDF_MAX_CHARACTERS || 4000;
@@ -995,7 +1025,7 @@ async function handlePdfAttachments(pdfAttachments) {
     const maxFiles = process.env.PDF_MAX_FILES || 5;
     
     if (pdfAttachments.length > maxFiles) {
-        return getText('errors.pdfMaxFiles', null, { count: maxFiles });
+        return getText('errors.pdfMaxFiles', contextObj, { count: maxFiles });
     }
     
     const PDF_PARSE_OPTIONS = {
@@ -1045,7 +1075,7 @@ async function handlePdfAttachments(pdfAttachments) {
         try {
             const fileSizeMB = attachment.size / (1024 * 1024);
             if (fileSizeMB > maxSizeMB) {
-                throw new Error(getText('errors.pdfTooLarge', null, { 
+                throw new Error(getText('errors.pdfTooLarge', contextObj, { 
                     filename: attachment.name, 
                     maxSize: maxSizeMB 
                 }));
@@ -1062,7 +1092,7 @@ async function handlePdfAttachments(pdfAttachments) {
             const data = await PDFParser(pdfBuffer, PDF_PARSE_OPTIONS);
             
             if (!data || !data.text) {
-                throw new Error(getText('errors.pdfParseError', null, { 
+                throw new Error(getText('errors.pdfParseError', contextObj, { 
                     filename: attachment.name 
                 }));
             }
@@ -1073,14 +1103,14 @@ async function handlePdfAttachments(pdfAttachments) {
                 .trim();
 
             if (cleanText.length > maxCharacters) {
-                throw new Error(getText('errors.pdfContentTooLong', null, { 
+                throw new Error(getText('errors.pdfContentTooLong', contextObj, { 
                     filename: attachment.name, 
                     maxChars: maxCharacters 
                 }));
             }
 
             if (totalCharacters + cleanText.length > maxTotalCharacters) {
-                throw new Error(getText('errors.pdfTotalContentTooLong', null, { 
+                throw new Error(getText('errors.pdfTotalContentTooLong', contextObj, { 
                     maxChars: maxTotalCharacters 
                 }));
             }
@@ -1111,15 +1141,15 @@ async function handlePdfAttachments(pdfAttachments) {
     }
     
     if (allContent.length === 0) {
-        return getText('errors.noPdfContent', null);
+        return getText('errors.noPdfContent', contextObj);
     }
 
-    let output = getText('common.pdfProcessed', null, { 
+    let output = getText('common.pdfProcessed', contextObj, { 
         count: allContent.length 
     });
 
     return output + allContent.map(pdf => 
-        getText('common.pdfFileInfo', null, {
+        getText('common.pdfFileInfo', contextObj, {
             filename: pdf.filename,
             pages: pdf.pages,
             size: pdf.size,
