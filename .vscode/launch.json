@@ -4,23 +4,13 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
-<<<<<<< HEAD
             "name": "Launch Package",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${fileDirname}"
-=======
-            "name": "Attach Camel Debugger",
-            "type": "apache.camel",
-            "request": "attach"
-        },
-        {
-            "type": "apache.camel",
-            "request": "attach",
-            "name": "Attach Camel Debugger"
->>>>>>> 1de879f1dec0ad91e91f3b857e2b99943fd47468
         }
     ]
 }
