@@ -18,3 +18,4 @@ roles-save.yaml
 .codersinflow
 .vscode
 node_modules
+.env.template
