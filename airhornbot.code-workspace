@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../airhornbot"
+		},
+		{
+			"path": "../calm-discord-bot"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"debug.allowBreakpointsEverywhere": true,
+		"files.autoGuessEncoding": true
+	}
+}

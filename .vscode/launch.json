@@ -10,6 +10,16 @@
             "request": "launch",
             "mode": "auto",
             "program": "${fileDirname}"
+        },
+        {
+            "name": "Attach Overmoderator (9230)",
+            "type": "node",
+            "request": "attach",
+            "port": 9230,
+            "restart": false,
+            "timeout": 30000,
+            "skipFiles": ["<node_internals>/**"],
+            "cwd": "${workspaceFolder}/packages/overmoderator"
         }
     ]
 }

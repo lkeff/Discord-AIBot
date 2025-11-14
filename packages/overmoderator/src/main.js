@@ -29,8 +29,20 @@ client.commands = new Collection();
 
 // Connect MangoDB
 const mongoose = require('mongoose');
-mongoose.set('strictQuery', true);
-const { connect } = require("mongoose");
+// Optional verbose logging of Mongo operations
+if (process.env.MONGOOSE_DEBUG === 'true') {
+    mongoose.set('debug', true);
+}
+
+// Connection state diagnostics
+mongoose.connection.on('connecting', () => console.log('[MongoDB] connecting...'));
+mongoose.connection.on('connected', () => console.log('[MongoDB] connected'));
+mongoose.connection.on('open', () => console.log('[MongoDB] connection open'));
+mongoose.connection.on('reconnected', () => console.log('[MongoDB] reconnected'));
+mongoose.connection.on('disconnected', () => console.warn('[MongoDB] disconnected'));
+mongoose.connection.on('close', () => console.warn('[MongoDB] connection closed'));
+mongoose.connection.on('error', (err) => console.error('[MongoDB] error:', err && err.message ? err.message : err));
+
 const UserSettings = require('./Models/UserSettings');
 const Conversation = require('./Models/Conversation');
 
@@ -130,7 +142,14 @@ async function cleanupOldConversations() {
 if (process.env.OFFLINE_MODE === 'true') {
     console.log('Running in offline mode. Skipping database connection and Discord login.');
 } else {
-    connect(process.env.MONGODB_URI, {})
+    // use mongoose.connect here (single, consistent connection)
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+        console.error('Missing MONGODB_URI environment variable');
+        process.exit(1);
+    }
+
+    mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
         .then(async () => {
             console.log("成功連接到數據庫");
             setInterval(cleanupOldConversations, 3 * 24 * 60 * 60 * 1000);
@@ -141,7 +160,6 @@ if (process.env.OFFLINE_MODE === 'true') {
             console.timeEnd("加載用戶設置");
             
             // 啟動機器人
-            //console.log("正在啟動機器人...");
             console.log('\x1b[35m%s\x1b[0m', `
                 ███╗   ██╗██╗██████╗  █████╗      █████╗ ██╗
                 ████╗  ██║██║██╔══██╗██╔══██╗    ██╔══██╗██║
@@ -150,9 +168,15 @@ if (process.env.OFFLINE_MODE === 'true') {
                 ██║ ╚████║██║██████╔╝██║  ██║    ██║  ██║██║
                 ╚═╝  ╚═══╝╚═╝╚═════╝ ╚═╝  ╚═╝    ╚═╝  ╚═╝╚═╝
                 `);
-                console.log('\x1b[36m%s\x1b[0m', '歡迎使用 你爸NIBA AI Discord 機器人 v1.0');
-                console.log('\x1b[33m%s\x1b[0m', '正在啟動中...\n');
-            client.login(process.env.DISCORD_BOT_TOKEN)
+            console.log('\x1b[36m%s\x1b[0m', '歡迎使用 你爸NIBA AI Discord 機器人 v1.0');
+            console.log('\x1b[33m%s\x1b[0m', '正在啟動中...\n');
+            const token = (process.env.DISCORD_BOT_TOKEN || '').trim();
+            if (!token) {
+                console.error('缺少 DISCORD_BOT_TOKEN：請在 .env 中設置機器人 Token（不要使用 Client ID/Secret，也不要加引號或前綴）。');
+                process.exit(1);
+            }
+
+            client.login(token)
                 .then(() => {
                     // 登錄成功後加載事件
                     loadEvents(client);
@@ -163,5 +187,6 @@ if (process.env.OFFLINE_MODE === 'true') {
         })
         .catch(error => {
             console.error('數據庫連接錯誤:', error);
+            process.exit(1);
         });
 }

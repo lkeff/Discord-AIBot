@@ -1,7 +1,2 @@
-const i18n = require('./src/i18n.js');
-const fileLoader = require('./src/fileLoader.js');
-
-module.exports = {
-    ...i18n,
-    ...fileLoader,
-};
+﻿// Re-export i18n functions so consumers can call setDefaultLanguage(...)
+module.exports = require('./src/i18n');

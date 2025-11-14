@@ -16,7 +16,7 @@
     "start": "npm run start -w overmoderator",
     "dev": "npm run dev -w overmoderator",
     "bots:start": "npm start --workspaces",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "yarn workspaces run test"
   },
   "dependencies": {
     "@google/gemini-cli": "github:google-gemini/gemini-cli"
