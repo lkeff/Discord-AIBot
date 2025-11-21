@@ -47,13 +47,13 @@ const voiceApi = process.env.VOICE_API_KEY || process.env.DEFAULT_API_KEY;
 const voiceBase = process.env.VOICE_BASE_URL || process.env.DEFAULT_BASE_URL;
 const voiceModel = process.env.VOICE_MODEL;
 const voiceEngine = (process.env.VOICE_ENGINE || 'whisper').toLowerCase();
-const voicePrompt = process.env.VOICE_PROMPT || "You will hear isolated English letters separated by pauses. The letters may include: s, f, k, and clusters like 'ck' and 'kk', as well as pairs like 'ai', 'ei', and 'ey'.";
+const voicePrompt = process.env.VOICE_PROMPT || "You will hear isolated English letters separated by pauses. The letters may include: s, f, k, d, t, b, g, and clusters like 'ck' and 'kk', as well as pairs like 'ai', 'ei', 'ey', and 'ty'. Pronunciations like 'ess' for s, 'eff' for f, 'kay' for k, 'dee' for d, 'tee' for t, 'bee' for b, and 'gee' for g may be used. You may also hear whole words such as 'air', 'sheer', 'cheer', and 'dear'.";
 const voiceTemperature = process.env.VOICE_TEMPERATURE ? parseFloat(process.env.VOICE_TEMPERATURE) : 0;
 const voiceLanguage = process.env.VOICE_LANGUAGE || 'en';
 const voiceNormalizeLetters = process.env.VOICE_NORMALIZE_LETTERS !== 'false';
 const dsModelPath = process.env.VOICE_DS_MODEL_PATH;
 const dsScorerPath = process.env.VOICE_DS_SCORER_PATH;
-const dsHotWords = process.env.VOICE_DS_HOT_WORDS || 's:4,f:4,k:4,ck:4,kk:4,ai:5,ei:5,ey:5';
+const dsHotWords = process.env.VOICE_DS_HOT_WORDS || 's:4,f:4,k:4,ck:4,kk:4,ai:5,ei:5,ey:5,d:5,t:5,dee:6,tee:6,ty:6,b:5,g:5,bee:6,gee:6,air:6,sheer:6,cheer:6,dear:6';
 const sfZcrThreshold = process.env.VOICE_SF_ZCR_THRESHOLD ? parseFloat(process.env.VOICE_SF_ZCR_THRESHOLD) : 0.12;
 const dsBeamWidth = process.env.VOICE_DS_BEAM_WIDTH ? parseInt(process.env.VOICE_DS_BEAM_WIDTH, 10) : undefined;
 
@@ -64,9 +64,18 @@ function normalizeSF(text) {
     if (cleaned === 's' || joined === 's' || cleaned === 'ess' || joined === 'ess') return 's';
     if (cleaned === 'f' || joined === 'f' || cleaned === 'eff' || joined === 'eff') return 'f';
     if (cleaned === 'k' || joined === 'k' || cleaned === 'kay' || joined === 'kay') return 'k';
+    if (cleaned === 'b' || joined === 'b' || cleaned === 'bee' || joined === 'bee') return 'b';
+    if (cleaned === 'g' || joined === 'g' || cleaned === 'gee' || joined === 'gee') return 'g';
     if (cleaned === 'a i' || joined === 'ai') return 'ai';
     if (cleaned === 'e i' || joined === 'ei') return 'ei';
     if (cleaned === 'e y' || joined === 'ey') return 'ey';
+    if (cleaned === 'd' || joined === 'd' || cleaned === 'dee' || joined === 'dee') return 'd';
+    if (cleaned === 't' || joined === 't' || cleaned === 'tee' || joined === 'tee') return 't';
+    if (cleaned === 't y' || joined === 'ty') return 'ty';
+    if (cleaned === 'air' || joined === 'air') return 'air';
+    if (cleaned === 'sheer' || joined === 'sheer') return 'sheer';
+    if (cleaned === 'cheer' || joined === 'cheer') return 'cheer';
+    if (cleaned === 'dear' || joined === 'dear') return 'dear';
     return null;
 }
 
