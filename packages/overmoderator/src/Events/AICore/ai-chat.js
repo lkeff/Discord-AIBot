@@ -46,6 +46,79 @@ const MAX_TOKENS = process.env.MAX_CONTEXT_TOKENS;
 const voiceApi = process.env.VOICE_API_KEY || process.env.DEFAULT_API_KEY;
 const voiceBase = process.env.VOICE_BASE_URL || process.env.DEFAULT_BASE_URL;
 const voiceModel = process.env.VOICE_MODEL;
+const voiceEngine = (process.env.VOICE_ENGINE || 'whisper').toLowerCase();
+const voicePrompt = process.env.VOICE_PROMPT || "You will hear isolated English letters separated by pauses. The letters may include: s, f, k, and clusters like 'ck' and 'kk', as well as pairs like 'ai', 'ei', and 'ey'.";
+const voiceTemperature = process.env.VOICE_TEMPERATURE ? parseFloat(process.env.VOICE_TEMPERATURE) : 0;
+const voiceLanguage = process.env.VOICE_LANGUAGE || 'en';
+const voiceNormalizeLetters = process.env.VOICE_NORMALIZE_LETTERS !== 'false';
+const dsModelPath = process.env.VOICE_DS_MODEL_PATH;
+const dsScorerPath = process.env.VOICE_DS_SCORER_PATH;
+const dsHotWords = process.env.VOICE_DS_HOT_WORDS || 's:4,f:4,k:4,ck:4,kk:4,ai:5,ei:5,ey:5';
+const sfZcrThreshold = process.env.VOICE_SF_ZCR_THRESHOLD ? parseFloat(process.env.VOICE_SF_ZCR_THRESHOLD) : 0.12;
+const dsBeamWidth = process.env.VOICE_DS_BEAM_WIDTH ? parseInt(process.env.VOICE_DS_BEAM_WIDTH, 10) : undefined;
+
+function normalizeSF(text) {
+    const t = (text || '').toLowerCase().trim();
+    const cleaned = t.replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const joined = cleaned.replace(/\s+/g, '');
+    if (cleaned === 's' || joined === 's' || cleaned === 'ess' || joined === 'ess') return 's';
+    if (cleaned === 'f' || joined === 'f' || cleaned === 'eff' || joined === 'eff') return 'f';
+    if (cleaned === 'k' || joined === 'k' || cleaned === 'kay' || joined === 'kay') return 'k';
+    if (cleaned === 'a i' || joined === 'ai') return 'ai';
+    if (cleaned === 'e i' || joined === 'ei') return 'ei';
+    if (cleaned === 'e y' || joined === 'ey') return 'ey';
+    return null;
+}
+
+// Minimal WAV PCM16 parser (mono/stereo). Returns { pcm:Int16Array, sampleRate:number }
+function parseWavPcm16(buffer) {
+    // buffer is a Node.js Buffer
+    if (buffer.toString('ascii', 0, 4) !== 'RIFF' || buffer.toString('ascii', 8, 12) !== 'WAVE') {
+        throw new Error('Not a RIFF/WAVE file');
+    }
+    let offset = 12; // start of first chunk
+    let fmt = null;
+    let dataStart = -1;
+    let dataSize = 0;
+    while (offset + 8 <= buffer.length) {
+        const chunkId = buffer.toString('ascii', offset, offset + 4);
+        const chunkSize = buffer.readUInt32LE(offset + 4);
+        const next = offset + 8 + chunkSize;
+        if (chunkId === 'fmt ') {
+            const audioFormat = buffer.readUInt16LE(offset + 8);
+            const numChannels = buffer.readUInt16LE(offset + 10);
+            const sampleRate = buffer.readUInt32LE(offset + 12);
+            const bitsPerSample = buffer.readUInt16LE(offset + 22);
+            fmt = { audioFormat, numChannels, sampleRate, bitsPerSample };
+        } else if (chunkId === 'data') {
+            dataStart = offset + 8;
+            dataSize = chunkSize;
+        }
+        offset = next;
+    }
+    if (!fmt) throw new Error('WAV fmt chunk not found');
+    if (fmt.audioFormat !== 1 || fmt.bitsPerSample !== 16) throw new Error('Only PCM16 WAV supported');
+    if (dataStart < 0 || dataSize <= 0) throw new Error('WAV data chunk not found');
+    const samples = dataSize / 2;
+    const pcm = new Int16Array(samples);
+    for (let i = 0; i < samples; i++) {
+        pcm[i] = buffer.readInt16LE(dataStart + i * 2);
+    }
+    return { pcm, sampleRate: fmt.sampleRate };
+}
+
+// Simple zero-crossing rate over PCM16 frames
+function zeroCrossingRate(pcm) {
+    if (!pcm || pcm.length < 2) return 0;
+    let crossings = 0;
+    let prev = pcm[0];
+    for (let i = 1; i < pcm.length; i++) {
+        const cur = pcm[i];
+        if ((prev >= 0 && cur < 0) || (prev < 0 && cur >= 0)) crossings++;
+        prev = cur;
+    }
+    return crossings / (pcm.length - 1);
+}
 
 // image model
 const defaultModel = process.env.DEFAULT_MODEL;
@@ -72,29 +145,93 @@ async function handleAudioAttachment(message, audioAttachment, conversationLog, 
     
     try {
         const audioBuffer = await fetch(audioAttachment.url).then(res => res.buffer());
-        
-        const audioOpenai = new OpenAI({
-            apiKey: voiceApi,
-            baseURL: voiceBase
-        });
-        
-        const transcription = await audioOpenai.audio.transcriptions.create({
-            file: new File([audioBuffer], 'audio.mp3', { type: audioAttachment.contentType }),
-            model: voiceModel,
-        });
-        
+
+        let finalText = '';
+        let transcriptRaw = '';
+
+        if (voiceEngine === 'deepspeech') {
+            try {
+                const Deepspeech = require('deepspeech');
+                if (!dsModelPath) throw new Error('VOICE_DS_MODEL_PATH is not set');
+                const model = new Deepspeech.Model(dsModelPath);
+                if (dsBeamWidth && Number.isInteger(dsBeamWidth) && model.setBeamWidth) {
+                    try { model.setBeamWidth(dsBeamWidth); } catch {}
+                }
+                if (dsScorerPath) {
+                    model.enableExternalScorer(dsScorerPath);
+                }
+                // apply hot-words like "s:4,f:4"
+                if (dsHotWords) {
+                    dsHotWords.split(',').forEach(pair => {
+                        const [word, weightStr] = pair.split(':');
+                        const weight = parseFloat(weightStr);
+                        if (word && !isNaN(weight) && model.addHotWord) {
+                            try { model.addHotWord(word.trim(), weight); } catch {}
+                        }
+                    });
+                }
+
+                // For DS, only support WAV PCM16 attachments here
+                let pcm;
+                let wavInfo;
+                if (audioAttachment.contentType?.includes('wav')) {
+                    wavInfo = parseWavPcm16(audioBuffer);
+                    pcm = wavInfo.pcm;
+                } else {
+                    throw new Error('DeepSpeech path requires WAV PCM16 audio attachment');
+                }
+                transcriptRaw = model.stt(pcm);
+            } catch (e) {
+                console.log('DeepSpeech error or not installed:', e?.message || e);
+                await message.reply(`❌ ${getText('events.AICore.audioProcessFailed', message.author.id)}\n\n-# Install and configure DeepSpeech or switch VOICE_ENGINE=whisper`);
+                clearInterval(typingInterval);
+                return true;
+            }
+        } else {
+            const audioOpenai = new OpenAI({
+                apiKey: voiceApi,
+                baseURL: voiceBase
+            });
+            const fileName = audioAttachment.name || 'audio';
+            const fileExt = audioAttachment.contentType?.includes('wav') ? 'wav' : 'mp3';
+            const fileType = audioAttachment.contentType || (fileExt === 'wav' ? 'audio/wav' : 'audio/mpeg');
+            const fileUpload = await OpenAI.toFile(audioBuffer, `${fileName}.${fileExt}`, { contentType: fileType });
+            const transcription = await audioOpenai.audio.transcriptions.create({
+                file: fileUpload,
+                model: voiceModel,
+                prompt: voicePrompt,
+                temperature: voiceTemperature,
+                language: voiceLanguage,
+            });
+            transcriptRaw = transcription.text;
+        }
+
+        const normalized = voiceNormalizeLetters ? normalizeSF(transcriptRaw) : null;
+        finalText = normalized || transcriptRaw;
+
+        // WAV-only spectral fallback using zero-crossing rate for s/f
+        try {
+            if (!normalized && (finalText.length <= 3) && audioAttachment.contentType?.includes('wav')) {
+                const { pcm, sampleRate } = parseWavPcm16(audioBuffer);
+                const zcr = zeroCrossingRate(pcm);
+                const sfGuess = zcr > sfZcrThreshold ? 's' : 'f';
+                finalText = sfGuess;
+            }
+        } catch (e) {
+            // ignore DSP fallback errors
+        }
+
         conversationLog.push({
             role: 'user',
-            content: transcription.text,
+            content: finalText,
         });
-
-        await message.reply(`${transcription.text}\n-# ✧${getText('events.AICore.transcription', message.author.id)}`);
+        await message.reply(`${finalText}\n-# ✧${getText('events.AICore.transcription', message.author.id)}`);
         
         const modelToUse = getModelForUser(message.author.id, client);
 
         const textOnlyLog = conversationLog.filter(log => typeof log.content === 'string');
         const totalTokens = encodeChat(textOnlyLog, 'gpt-3.5-turbo').length;
-        const currentMessageTokens = encodeChat([{ role: 'user', content: transcription.text }], 'gpt-3.5-turbo').length;
+        const currentMessageTokens = encodeChat([{ role: 'user', content: finalText }], 'gpt-3.5-turbo').length;
         
         if (totalTokens + currentMessageTokens >= MAX_TOKENS) {
             conversationLog = await handleConversationSummary(conversationLog, message, null, message.author.id);
