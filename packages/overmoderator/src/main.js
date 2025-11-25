@@ -190,3 +190,6 @@ if (process.env.OFFLINE_MODE === 'true') {
             process.exit(1);
         });
 }
+// Conversation / passiar mode
+client.passiarChannels = new Set();   // channels with always-on conversation mode
+client.passiarUsers = new Set();      // users with always-on conversation mode

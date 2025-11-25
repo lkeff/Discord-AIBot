@@ -95,5 +95,60 @@ function loadCommands(client) {
   console.log(table.toString()/*, "\nLoaded Commands."*/);
   console.timeEnd("Command Loaded");
 }
-
+{
+    name: 'passiar',
+    description: 'Control conversation mode (passive chat)',
+    options: [
+        {
+            type: 2, // SUB_COMMAND_GROUP
+            name: 'channel',
+            description: 'Channel-level passiar mode',
+            options: [
+                {
+                    type: 1, // SUB_COMMAND
+                    name: 'start',
+                    description: 'Enable passiar in this channel'
+                },
+                {
+                    type: 1, // SUB_COMMAND
+                    name: 'stop',
+                    description: 'Disable passiar in this channel'
+                }
+            ]
+        },
+        {
+            type: 2, // SUB_COMMAND_GROUP
+            name: 'user',
+            description: 'User-level passiar mode',
+            options: [
+                {
+                    type: 1, // SUB_COMMAND
+                    name: 'start',
+                    description: 'Enable passiar for a user',
+                    options: [
+                        {
+                            type: 6, // USER
+                            name: 'user',
+                            description: 'Target user (defaults to you if omitted)',
+                            required: false
+                        }
+                    ]
+                },
+                {
+                    type: 1, // SUB_COMMAND
+                    name: 'stop',
+                    description: 'Disable passiar for a user',
+                    options: [
+                        {
+                            type: 6, // USER
+                            name: 'user',
+                            description: 'Target user (defaults to you if omitted)',
+                            required: false
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
 module.exports = { loadCommands };
