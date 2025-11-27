@@ -23,7 +23,10 @@ if (process.env.DEFAULT_MODEL) {
     models.default = process.env.DEFAULT_MODEL;
 }
 
-const replyChannels = process.env.REPLY_CHANNEL.split(',');
+const replyChannels = (process.env.REPLY_CHANNEL || '')
+    .split(',')
+    .map((c) => c.trim())
+    .filter((c) => c.length > 0);
 
 const openai = new OpenAI({
     apiKey: process.env.DEFAULT_API_KEY,
@@ -42,7 +45,7 @@ const {
 
 const { getText } = require('../../Functions/i18n');
 
-const MAX_TOKENS = process.env.MAX_CONTEXT_TOKENS;
+const MAX_TOKENS = Number(process.env.MAX_CONTEXT_TOKENS || 8192);
 const voiceApi = process.env.VOICE_API_KEY || process.env.DEFAULT_API_KEY;
 const voiceBase = process.env.VOICE_BASE_URL || process.env.DEFAULT_BASE_URL;
 const voiceModel = process.env.VOICE_MODEL;
@@ -293,235 +296,108 @@ async function handleTextMessage(message, conversationLog, messageContent, clien
 }
 
 module.exports = {
-  name: "messageCreate",
-  async execute(message, client) {
-    if (message.author.bot || message.interaction) return;
-    const inPassiarChannel = client.passiarChannels && client.passiarChannels.has(message.channel.id);
-const inPassiarUser = client.passiarUsers && client.passiarUsers.has(message.author.id);
+    name: "messageCreate",
+    async execute(message, client) {
+        if (message.author.bot || message.interaction) return;
 
-const inPassiarChannel = client.passiarChannels && client.passiarChannels.has(message.channel.id);
-const inPassiarUser = client.passiarUsers && client.passiarUsers.has(message.author.id);
+        const inPassiarChannel = client.passiarChannels && client.passiarChannels.has(message.channel.id);
+        const inPassiarUser = client.passiarUsers && client.passiarUsers.has(message.author.id);
 
-if (
-    (message.mentions.has(client.user) && !message.mentions.everyone) ||
-    replyChannels.includes(message.channel.id) ||
-    inPassiarChannel ||
-    inPassiarUser
-) {
-    if (!client.userConversations) {
-        client.userConversations = {};
-    }
-    
-    if (!client.userConversations[message.author.id]) {
-        await updateUserSystemPrompt(message.author.id, message, client);
-    }
-    
-    let conversationLog = client.userConversations[message.author.id];
-    let messageContent = '';
-    let attachments = [];
+        if (
+            (message.mentions.has(client.user) && !message.mentions.everyone) ||
+            replyChannels.includes(message.channel.id) ||
+            inPassiarChannel ||
+            inPassiarUser
+        ) {
+            if (!client.userConversations) {
+                client.userConversations = {};
+            }
+            
+            if (!client.userConversations[message.author.id]) {
+                await updateUserSystemPrompt(message.author.id, message, client);
+            }
+            
+            let conversationLog = client.userConversations[message.author.id];
+            let messageContent = '';
+            let attachments = [];
 
-    // paste the rest of your existing logic here:
-    // - reference handling
-    // - attachment checks
-    // - calling handleAudioAttachment / handlePdfAndImageAttachments / ...
-    // - handleTextMessage(...)
-}
-module.exports = {
-  name: "messageCreate",
-  async execute(message, client) {
-    if (message.author.bot || message.interaction) return;
+            if (message.reference && message.reference.messageId) {
+                try {
+                    const referencedMessage = await message.channel.messages.fetch(message.reference.messageId);
+                    if (referencedMessage && !referencedMessage.author.bot) {
 
-    const inPassiarChannel = client.passiarChannels && client.passiarChannels.has(message.channel.id);
-    const inPassiarUser = client.passiarUsers && client.passiarUsers.has(message.author.id);
+                        if (referencedMessage.attachments.size > 0) {
+                            const originalImages = referencedMessage.attachments.filter(
+                                attachment => attachment.contentType?.includes('image')
+                            );
 
-    if (
-        (message.mentions.has(client.user) && !message.mentions.everyone) ||
-        replyChannels.includes(message.channel.id) ||
-        inPassiarChannel ||
-        inPassiarUser
-    ) {
-        if (!client.userConversations) {
-            client.userConversations = {};
-        }
-        
-        if (!client.userConversations[message.author.id]) {
-            await updateUserSystemPrompt(message.author.id, message, client);
-        }
-        
-        let conversationLog = client.userConversations[message.author.id];
-        let messageContent = '';
-        let attachments = [];
+                            if (originalImages.size > 0) {
+                                attachments = Array.from(originalImages.values());
+                                messageContent = `${getText('events.AICore.referencedUserImage', message.author.id, {
+                                    user: referencedMessage.member.displayName || referencedMessage.author.displayName,
+                                    mention: referencedMessage.author
+                                })}\n${referencedMessage.content}\n\n${message.content}`;
+                            }
+                        }
 
-        if (message.reference && message.reference.messageId) {
-            try {
-                const referencedMessage = await message.channel.messages.fetch(message.reference.messageId);
-                if (referencedMessage && !referencedMessage.author.bot) {
-
-                    if (referencedMessage.attachments.size > 0) {
-                        const originalImages = referencedMessage.attachments.filter(
-                            attachment => attachment.contentType?.includes('image')
-                        );
-
-                        if (originalImages.size > 0) {
-                            attachments = Array.from(originalImages.values());
-                            messageContent = `${getText('events.AICore.referencedUserImage', message.author.id, {
+                        if(referencedMessage.content) {
+                            messageContent = `${getText('events.AICore.referencedUserSaid', message.author.id, {
                                 user: referencedMessage.member.displayName || referencedMessage.author.displayName,
                                 mention: referencedMessage.author
                             })}\n${referencedMessage.content}\n\n${message.content}`;
                         }
+                    } else {
+                        messageContent = message.content;
                     }
-
-                    if(referencedMessage.content) {
-                        messageContent = `${getText('events.AICore.referencedUserSaid', message.author.id, {
-                            user: referencedMessage.member.displayName || referencedMessage.author.displayName,
-                            mention: referencedMessage.author
-                        })}\n${referencedMessage.content}\n\n${message.content}`;
-                    }
-                } else {
+                } catch (error) {
+                    console.log('Failed to fetch referenced message:', error);
                     messageContent = message.content;
                 }
-            } catch (error) {
-                console.log('Failed to fetch referenced message:', error);
+            } else {
                 messageContent = message.content;
             }
-        } else {
-            messageContent = message.content;
-        }
 
-        if (message.attachments.size > 0 || attachments.length > 0) {
-            const typingInterval = setInterval(() => {
-                message.channel.sendTyping();
-            }, 4000);
+            if (message.attachments.size > 0 || attachments.length > 0) {
+                const typingInterval = setInterval(() => {
+                    message.channel.sendTyping();
+                }, 4000);
 
-            const allAttachments = [...attachments, ...Array.from(message.attachments.values())];
-            const audioAttachment = allAttachments.find(attachment => attachment.contentType?.startsWith('audio/'));
-            const pdfAttachments = allAttachments.filter(attachment => attachment.contentType === 'application/pdf');
-            const imageAttachments = allAttachments.filter(attachment => attachment.contentType?.includes('image'));
+                const allAttachments = [...attachments, ...Array.from(message.attachments.values())];
+                const audioAttachment = allAttachments.find(attachment => attachment.contentType?.startsWith('audio/'));
+                const pdfAttachments = allAttachments.filter(attachment => attachment.contentType === 'application/pdf');
+                const imageAttachments = allAttachments.filter(attachment => attachment.contentType?.includes('image'));
 
-            // for audio attachment
-            if (audioAttachment) {
-                if (await handleAudioAttachment(message, audioAttachment, conversationLog, typingInterval, client)) {
-                    return;
+                // for audio attachment
+                if (audioAttachment) {
+                    if (await handleAudioAttachment(message, audioAttachment, conversationLog, typingInterval, client)) {
+                        return;
+                    }
                 }
-            }
 
-            // for pdf and image attachments
-            if (pdfAttachments.length > 0 && imageAttachments.length > 0) {
-                if (await handlePdfAndImageAttachments(message, pdfAttachments, imageAttachments, conversationLog, messageContent, typingInterval, client)) {
-                    return;
+                // for pdf and image attachments
+                if (pdfAttachments.length > 0 && imageAttachments.length > 0) {
+                    if (await handlePdfAndImageAttachments(message, pdfAttachments, imageAttachments, conversationLog, messageContent, typingInterval, client)) {
+                        return;
+                    }
                 }
-            }
-            
-            // for pdf attachments
-            if (pdfAttachments.length > 0) {
-                if (await handlePdfAttachmentsOnly(message, pdfAttachments, conversationLog, messageContent, typingInterval, client)) {
-                    return;
+                
+                // for pdf attachments
+                if (pdfAttachments.length > 0) {
+                    if (await handlePdfAttachmentsOnly(message, pdfAttachments, conversationLog, messageContent, typingInterval, client)) {
+                        return;
+                    }
                 }
-            }
-            
-            // for image attachments
-            if (imageAttachments.length > 0) {
-                if (await handleImageAttachments(message, imageAttachments, conversationLog, messageContent, typingInterval, client)) {
-                    return;
+                
+                // for image attachments
+                if (imageAttachments.length > 0) {
+                    if (await handleImageAttachments(message, imageAttachments, conversationLog, messageContent, typingInterval, client)) {
+                        return;
+                    }
                 }
+            } else {
+                // for text message
+                await handleTextMessage(message, conversationLog, messageContent, client);
             }
-        } else {
-            // for text message
-            await handleTextMessage(message, conversationLog, messageContent, client);
         }
     }
-  }
-}
-
-    // ...rest of existing logic...
-}
-        }
-        
-        if (!client.userConversations[message.author.id]) {
-            await updateUserSystemPrompt(message.author.id, message, client);
-        }
-        
-        let conversationLog = client.userConversations[message.author.id];
-        let messageContent = '';
-        let attachments = [];
-
-        if (message.reference && message.reference.messageId) {
-            try {
-                const referencedMessage = await message.channel.messages.fetch(message.reference.messageId);
-                if (referencedMessage && !referencedMessage.author.bot) {
-
-                    if (referencedMessage.attachments.size > 0) {
-                        const originalImages = referencedMessage.attachments.filter(
-                            attachment => attachment.contentType?.includes('image')
-                        );
-
-                        if (originalImages.size > 0) {
-                            attachments = Array.from(originalImages.values());
-                            messageContent = `${getText('events.AICore.referencedUserImage', message.author.id, {
-                                user: referencedMessage.member.displayName || referencedMessage.author.displayName,
-                                mention: referencedMessage.author
-                            })}\n${referencedMessage.content}\n\n${message.content}`;
-                        }
-                    }
-
-                    if(referencedMessage.content) {
-                        messageContent = `${getText('events.AICore.referencedUserSaid', message.author.id, {
-                            user: referencedMessage.member.displayName || referencedMessage.author.displayName,
-                            mention: referencedMessage.author
-                        })}\n${referencedMessage.content}\n\n${message.content}`;
-                    }
-                } else {
-                    messageContent = message.content;
-                }
-            } catch (error) {
-                console.log('Failed to fetch referenced message:', error);
-                messageContent = message.content;
-            }
-        } else {
-            messageContent = message.content;
-        }
-
-        if (message.attachments.size > 0 || attachments.length > 0) {
-            const typingInterval = setInterval(() => {
-                message.channel.sendTyping();
-            }, 4000);
-
-            const allAttachments = [...attachments, ...Array.from(message.attachments.values())];
-            const audioAttachment = allAttachments.find(attachment => attachment.contentType?.startsWith('audio/'));
-            const pdfAttachments = allAttachments.filter(attachment => attachment.contentType === 'application/pdf');
-            const imageAttachments = allAttachments.filter(attachment => attachment.contentType?.includes('image'));
-
-            // for audio attachment
-            if (audioAttachment) {
-                if (await handleAudioAttachment(message, audioAttachment, conversationLog, typingInterval, client)) {
-                    return;
-                }
-            }
-
-            // for pdf and image attachments
-            if (pdfAttachments.length > 0 && imageAttachments.length > 0) {
-                if (await handlePdfAndImageAttachments(message, pdfAttachments, imageAttachments, conversationLog, messageContent, typingInterval, client)) {
-                    return;
-                }
-            }
-            
-            // for pdf attachments
-            if (pdfAttachments.length > 0) {
-                if (await handlePdfAttachmentsOnly(message, pdfAttachments, conversationLog, messageContent, typingInterval, client)) {
-                    return;
-                }
-            }
-            
-            // for image attachments
-            if (imageAttachments.length > 0) {
-                if (await handleImageAttachments(message, imageAttachments, conversationLog, messageContent, typingInterval, client)) {
-                    return;
-                }
-            }
-        } else {
-            // for text message
-            await handleTextMessage(message, conversationLog, messageContent, client);
-        }
-    }
-  }
-}
+};

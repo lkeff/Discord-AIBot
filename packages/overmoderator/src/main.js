@@ -151,7 +151,7 @@ if (process.env.OFFLINE_MODE === 'true') {
                 process.exit(1);
             }
 
-            client.login(token)
+            client.login(1370657808055406612)
                 .then(() => {
                     // 登錄成功後加載事件
                     loadEvents(client);

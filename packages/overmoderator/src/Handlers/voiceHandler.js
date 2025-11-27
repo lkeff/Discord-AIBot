@@ -29,7 +29,24 @@
  * const { promisify } = require('util');
  */
 
-const streamPipeline = null; // Replace with: promisify(pipeline);
+const { 
+  joinVoiceChannel, 
+  createAudioPlayer, 
+  createAudioResource,
+  AudioPlayerStatus,
+  VoiceConnectionStatus,
+  entersState,
+  VoiceConnectionDisconnectReason,
+  StreamType
+} = require('@discordjs/voice');
+const { createWriteStream, unlinkSync } = require('fs');
+const { pipeline } = require('stream');
+const { promisify } = require('util');
+const path = require('path');
+const os = require('os');
+const OpenAI = require('openai');
+
+const streamPipeline = promisify(pipeline);
 
 /**
  * Voice Connection Manager
@@ -81,21 +98,23 @@ class VoiceManager {
    */
   async joinChannel(channel) {
     console.log(`[Voice] Joining channel: ${channel.name} (${channel.id})`);
+    
+    if (this.connections.has(channel.guild.id)) {
+      this.resetIdleTimeout(channel.guild.id);
+      return this.connections.get(channel.guild.id);
+    }
 
-    // TODO: Uncomment after installing @discordjs/voice
-    /*
     const connection = joinVoiceChannel({
       channelId: channel.id,
       guildId: channel.guild.id,
       adapterCreator: channel.guild.voiceAdapterCreator,
     });
 
-    // Handle connection state changes
     connection.on(VoiceConnectionStatus.Ready, () => {
       console.log(`[Voice] Connected to ${channel.name}`);
     });
 
-    connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
+    connection.on(VoiceConnectionStatus.Disconnected, async () => {
       try {
         await Promise.race([
           entersState(connection, VoiceConnectionStatus.Signalling, 5000),
@@ -112,9 +131,6 @@ class VoiceManager {
     this.resetIdleTimeout(channel.guild.id);
 
     return connection;
-    */
-
-    throw new Error('Voice features require @discordjs/voice package. Please install it first.');
   }
 
   /**
@@ -122,8 +138,6 @@ class VoiceManager {
    * @param {string} guildId 
    */
   setupPlayer(guildId) {
-    // TODO: Uncomment after installing @discordjs/voice
-    /*
     if (this.players.has(guildId)) return;
 
     const player = createAudioPlayer();
@@ -143,7 +157,6 @@ class VoiceManager {
     }
 
     this.players.set(guildId, player);
-    */
   }
 
   /**
@@ -194,24 +207,54 @@ class VoiceManager {
     }
 
     try {
-      // TODO: Implement TTS generation and playback
-      /*
-      const stream = discordTTS.getVoiceStream(ttsRequest.text, {
-        lang: ttsRequest.language || 'en-US'
+      const voiceApiKey = process.env.VOICE_API_KEY || process.env.DEFAULT_API_KEY;
+      const voiceBaseUrl = process.env.VOICE_BASE_URL || process.env.DEFAULT_BASE_URL;
+      const voiceModel = ttsRequest.model || process.env.VOICE_TTS_MODEL || process.env.VOICE_MODEL;
+
+      if (!voiceApiKey || !voiceModel) {
+        console.error('[Voice] VOICE_API_KEY/DEFAULT_API_KEY or VOICE_TTS_MODEL/VOICE_MODEL not configured');
+        return;
+      }
+
+      const openai = new OpenAI({ apiKey: voiceApiKey, baseURL: voiceBaseUrl });
+      const tempDir = os.tmpdir();
+      const fileName = `tts-${guildId}-${Date.now()}.mp3`;
+      const filePath = path.join(tempDir, fileName);
+
+      const response = await openai.audio.speech.create({
+        model: voiceModel,
+        voice: ttsRequest.voice || 'alloy',
+        input: ttsRequest.text,
+        format: 'mp3'
       });
 
-      const resource = createAudioResource(stream, {
+      const buffer = Buffer.from(await response.arrayBuffer());
+      await streamPipeline(
+        require('stream').Readable.from(buffer),
+        createWriteStream(filePath)
+      );
+
+      const resource = createAudioResource(filePath, {
         inputType: StreamType.Arbitrary,
         inlineVolume: true
       });
 
-      resource.volume.setVolume(this.getSettings(guildId).volume);
+      const settings = this.getSettings(guildId);
+      if (resource.volume && typeof resource.volume.setVolume === 'function') {
+        resource.volume.setVolume(settings.volume);
+      }
+
       player.play(resource);
 
       console.log(`[Voice] Playing TTS in guild ${guildId}: "${ttsRequest.text.substring(0, 50)}..."`);
-      */
 
-      console.log(`[Voice] TTS playback not implemented - install required packages`);
+      resource.playStream.on('end', () => {
+        try {
+          unlinkSync(filePath);
+        } catch (err) {
+          // ignore
+        }
+      });
     } catch (error) {
       console.error(`[Voice] Error playing TTS:`, error);
       // Try next item
@@ -332,6 +375,23 @@ class VoiceManager {
         .reduce((sum, queue) => sum + queue.length, 0),
       guilds: Array.from(this.connections.keys())
     };
+  }
+
+  /**
+   * High-level helper to speak text in a guild's voice channel
+   * @param {import('discord.js').VoiceChannel} channel
+   * @param {string} text
+   * @param {object} [options]
+   */
+  async speak(channel, text, options = {}) {
+    const guildId = channel.guild.id;
+    await this.joinChannel(channel);
+    await this.addToQueue(guildId, {
+      text,
+      language: options.language || 'en-US',
+      voice: options.voice,
+      model: options.model
+    });
   }
 }
 

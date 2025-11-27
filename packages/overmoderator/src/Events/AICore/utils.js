@@ -25,7 +25,10 @@ if (process.env.DEFAULT_MODEL) {
 }
 
 const GENERATE_IMAGE_ENABLED = process.env.GENERATE_IMAGE === 'true';
-const replyChannels = process.env.REPLY_CHANNEL.split(',');
+const replyChannels = (process.env.REPLY_CHANNEL || '')
+	.split(',')
+	.map((c) => c.trim())
+	.filter((c) => c.length > 0);
 
 const openai = new OpenAI({
     apiKey: process.env.DEFAULT_API_KEY,
@@ -41,7 +44,7 @@ const {
 const UserSettings = require('../../Models/UserSettings');
 const Conversation = require('../../Models/Conversation');
 
-const MAX_TOKENS = process.env.MAX_CONTEXT_TOKENS;
+const MAX_TOKENS = Number(process.env.MAX_CONTEXT_TOKENS || 8192);
 const PredictionApi = process.env.BUTTON_API_KEY || process.env.DEFAULT_API_KEY;
 const PredictionBase = process.env.BUTTON_BASE_URL || process.env.DEFAULT_BASE_URL;
 const predictedModel = process.env.BUTTON_MODEL || process.env.DEFAULT_MODEL;
