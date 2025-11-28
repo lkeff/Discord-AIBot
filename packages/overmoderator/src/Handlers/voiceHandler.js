@@ -3,7 +3,7 @@
  * @description Voice connection and TTS queue management
  * @author Javis
  * @license MIT
- * @copyright Copyright (c) 2025
+ * @copyright Copyright (c) 2026
  * 
  * IMPORTANT: This handler requires the following packages:
  * - npm install @discordjs/voice @discordjs/opus ffmpeg-static discord-tts

@@ -3,12 +3,25 @@ const OpenAI = require('openai');
 const fetch = require('node-fetch');
 const SlotsBalance = require('../../Models/SlotsBalance');
 const voiceManager = require('../../Handlers/voiceHandler');
+const content = narration ? narration : (result.win ? 'You win!' : 'Better luck next time.');
 
+try {
+  await voiceManager.speak(voiceChannel, content, {
+    language: 'en-US'
+  });
+} catch (error) {
+  console.error('[Slots] Error playing TTS in voice channel:', error);
+}
+
+return interaction.editReply({
+  content,
+  embeds: [embed]
+});
 const SYMBOLS = ['🍒', '🍋', '🍀', '⭐', '💎', '7️⃣'];
 
 const DEFAULT_START_BALANCE = 1000;
 const DEFAULT_BET = 10;
-
+const voiceManager = require('../../Handlers/voiceHandler');
 function spinReels() {
   const reels = [];
   for (let i = 0; i < 3; i++) {
