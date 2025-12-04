@@ -87,7 +87,18 @@ module.exports = {
         }
 
         try {
-            await command.execute(interaction, client);
+            if (command.folder === 'Game') {
+                if (!client.games) {
+                    client.games = new Collection();
+                }
+                const game = client.games.get(interaction.channelId);
+                const newGame = await command.execute(interaction, client, game);
+                if (newGame) {
+                    client.games.set(interaction.channelId, newGame);
+                }
+            } else {
+                await command.execute(interaction, client);
+            }
         } catch (error) {
             console.error(error);
             await interaction.reply({ 

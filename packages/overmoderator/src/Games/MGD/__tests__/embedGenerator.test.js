@@ -1,5 +1,5 @@
 const { generateGameEmbed } = require('../embedGenerator');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, Colors } = require('discord.js');
 
 describe('embedGenerator', () => {
     test('generateGameEmbed should create a correct embed for a non-combat session', () => {
@@ -26,9 +26,9 @@ describe('embedGenerator', () => {
 
         expect(embedData.title).toBe('Metal Gear Discord: Shadow Moses Incident');
         expect(embedData.description).toBe('**Mission:** Outer Perimeter Infiltration');
-        expect(embedData.color).toBe(3381504); // DarkGreen
+        expect(embedData.color).toBe(Colors.DarkGreen);
 
-        expect(embedData.fields).toHaveLength(4); // Location, Health, Detection, Inventory, Map
+        expect(embedData.fields).toHaveLength(5); // Location, Health, Detection, Inventory, Map
 
         expect(embedData.fields[0].name).toBe('Location');
         expect(embedData.fields[0].value).toBe('(1, 1)');
@@ -69,17 +69,17 @@ describe('embedGenerator', () => {
         const embed = generateGameEmbed(mockSession);
         const embedData = embed.toJSON();
 
-        expect(embedData.color).toBe(16711680); // Red
-        expect(embedData.fields).toHaveLength(7); // Additional combat fields
+        expect(embedData.color).toBe(Colors.Red);
+        expect(embedData.fields).toHaveLength(8); // Additional combat fields
 
-        expect(embedData.fields[4].name).toBe('Combat Status');
-        expect(embedData.fields[4].value).toBe('In Combat!');
+        expect(embedData.fields[5].name).toBe('Combat Status');
+        expect(embedData.fields[5].value).toBe('In Combat!');
 
-        expect(embedData.fields[5].name).toBe('Enemy Health');
-        expect(embedData.fields[5].value).toBe('75%');
+        expect(embedData.fields[6].name).toBe('Enemy Health');
+        expect(embedData.fields[6].value).toBe('75%');
 
-        expect(embedData.fields[6].name).toBe('Your Turn');
-        expect(embedData.fields[6].value).toBe('Yes');
+        expect(embedData.fields[7].name).toBe('Your Turn');
+        expect(embedData.fields[7].value).toBe('Yes');
     });
 
     test('generateGameEmbed should handle empty inventory', () => {

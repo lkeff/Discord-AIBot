@@ -22,7 +22,7 @@ function generateGameEmbed(session) {
             { name: 'Health', value: `${session.playerHealth}%`, inline: true },
             { name: 'Detection', value: `${session.detectionLevel}%`, inline: true },
             { name: 'Inventory', value: session.playerInventory.length > 0 ? session.playerInventory.join(', ') : 'Empty', inline: false },
-            { name: 'Map', value: ````\n${mapDisplay}\n````, inline: false }
+            { name: 'Map', value: `\`\`\`\n${mapDisplay}\n\`\`\``, inline: false }
         )
         .setColor('DarkGreen')
         .setTimestamp();

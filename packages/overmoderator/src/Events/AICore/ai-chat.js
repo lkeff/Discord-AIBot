@@ -23,6 +23,25 @@ if (process.env.DEFAULT_MODEL) {
     models.default = process.env.DEFAULT_MODEL;
 }
 
+async function generateReplySuggestions(userText, count, stylePrompt) {
+    try {
+        const sys = 'You are a helpful assistant that crafts extremely concise, natural follow-up replies a Discord user might send next. Avoid emojis unless the user uses them. No punctuation if it reads fine without it.';
+        const res = await openai.chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            temperature: 0.3,
+            messages: [
+                { role: 'system', content: sys },
+                { role: 'user', content: `User said: "${userText}"
+${stylePrompt}
+Return ${count} options as a numbered list, one per line, no extra commentary.` }
+            ],
+        });
+        const text = res.choices?.[0]?.message?.content || '';
+        const lines = text.split(/\r?\n/).map(l => l.replace(/^\s*\d+\.?\s*/, '').trim()).filter(Boolean);
+        return lines.slice(0, count);
+    } catch (e) { return []; }
+}
+
 const replyChannels = process.env.REPLY_CHANNEL.split(',');
 
 const openai = new OpenAI({
@@ -51,11 +70,24 @@ const voicePrompt = process.env.VOICE_PROMPT || "You will hear isolated English 
 const voiceTemperature = process.env.VOICE_TEMPERATURE ? parseFloat(process.env.VOICE_TEMPERATURE) : 0;
 const voiceLanguage = process.env.VOICE_LANGUAGE || 'en';
 const voiceNormalizeLetters = process.env.VOICE_NORMALIZE_LETTERS !== 'false';
+const showTranscriptions = process.env.VOICE_SHOW_TRANSCRIPTIONS === 'true';
 const dsModelPath = process.env.VOICE_DS_MODEL_PATH;
 const dsScorerPath = process.env.VOICE_DS_SCORER_PATH;
 const dsHotWords = process.env.VOICE_DS_HOT_WORDS || 's:4,f:4,k:4,ck:4,kk:4,ai:5,ei:5,ey:5,gi:5,ji:5,ia:5,ci:5,fi:5,di:5,si:5,pi:5,my:5,d:5,t:5,dee:6,tee:6,ty:6,b:5,g:5,bee:6,gee:6,air:6,sheer:6,cheer:6,dear:6';
 const sfZcrThreshold = process.env.VOICE_SF_ZCR_THRESHOLD ? parseFloat(process.env.VOICE_SF_ZCR_THRESHOLD) : 0.12;
 const dsBeamWidth = process.env.VOICE_DS_BEAM_WIDTH ? parseInt(process.env.VOICE_DS_BEAM_WIDTH, 10) : undefined;
+const userCooldownMs = process.env.USER_COOLDOWN_MS ? parseInt(process.env.USER_COOLDOWN_MS, 10) : 3000;
+const channelCooldownMs = process.env.CHANNEL_COOLDOWN_MS ? parseInt(process.env.CHANNEL_COOLDOWN_MS, 10) : 1500;
+const chatStylePrompt = process.env.CHAT_STYLE_PROMPT || '';
+const replySuggestions = process.env.REPLY_SUGGESTIONS === 'true';
+const replySuggestionsCount = process.env.REPLY_SUGGESTIONS_COUNT ? Math.min(5, Math.max(1, parseInt(process.env.REPLY_SUGGESTIONS_COUNT, 10))) : 3;
+const replySuggestionsPrompt = process.env.REPLY_SUGGESTIONS_PROMPT || 'Generate a few very short, natural, non-spammy reply options the user might send next. Keep each to under 8 words.';
+
+const allowedShortTokens = new Set([
+    's','f','k','b','g','d','t','ty',
+    'ai','ei','ey','gi','ji','ia','ci','fi','di','si','pi','my'
+]);
+const allowedWords = new Set(['air','sheer','cheer','dear']);
 
 function normalizeSF(text) {
     const t = (text || '').toLowerCase().trim();
@@ -243,7 +275,19 @@ async function handleAudioAttachment(message, audioAttachment, conversationLog, 
             role: 'user',
             content: finalText,
         });
-        await message.reply(`${finalText}\n-# ✧${getText('events.AICore.transcription', message.author.id)}`);
+        if (showTranscriptions) {
+            await message.reply(`${finalText}\n-# ✧${getText('events.AICore.transcription', message.author.id)}`);
+        }
+        // Clarifier: if very short and not recognized, ask user to repeat/clarify
+        try {
+            const isShort = finalText && finalText.length <= 3;
+            const isAllowed = allowedShortTokens.has(finalText) || allowedWords.has(finalText);
+            if (isShort && !isAllowed) {
+                await message.reply(`I heard "${finalText}". Did you mean one of these pairs like s/f, k, ai/ei/ey, gi/ji, or ia/ci/fi/di/si/pi/my? Please repeat clearly.`);
+                clearInterval(typingInterval);
+                return true;
+            }
+        } catch {}
         
         const modelToUse = getModelForUser(message.author.id, client);
 
@@ -255,7 +299,22 @@ async function handleAudioAttachment(message, audioAttachment, conversationLog, 
             conversationLog = await handleConversationSummary(conversationLog, message, null, message.author.id);
         }
 
+        // Inject style prompt to avoid spammy tone if provided
+        if (chatStylePrompt) {
+            conversationLog.unshift({ role: 'system', content: chatStylePrompt });
+        }
         await sendStreamingResponse(message, message.channel, conversationLog, modelToUse, message.author, client);
+        // After main response, optionally post suggested replies
+        if (replySuggestions) {
+            try {
+                const lastUserMsg = finalText || '';
+                const suggestions = await generateReplySuggestions(lastUserMsg, replySuggestionsCount, replySuggestionsPrompt);
+                if (suggestions && suggestions.length) {
+                    const lines = suggestions.map((s, i) => `${i+1}. ${s}`).join('\n');
+                    await message.reply(`💬 Suggested quick replies:\n${lines}`);
+                }
+            } catch (e) { /* ignore */ }
+        }
         clearInterval(typingInterval);
         return true;
     } catch (error) {
@@ -451,7 +510,21 @@ module.exports = {
   name: "messageCreate",
   async execute(message, client) {
     if (message.author.bot || message.interaction) return;
+    // initialize cooldown stores
+    if (!client.__omCooldowns) {
+        client.__omCooldowns = { users: new Map(), channels: new Map() };
+    }
+    const now = Date.now();
+    const lastUser = client.__omCooldowns.users.get(message.author.id) || 0;
+    const lastChannel = client.__omCooldowns.channels.get(message.channel.id) || 0;
+    if (now - lastUser < parseInt(process.env.USER_COOLDOWN_MS) || now - lastChannel < parseInt(process.env.CHANNEL_COOLDOWN_MS)) {
+        return; // skip to avoid spam-like rapid replies
+    }
+    client.__omCooldowns.users.set(message.author.id, now);
+    client.__omCooldowns.channels.set(message.channel.id, now);
+
     if (message.mentions.has(client.user) && !message.mentions.everyone || replyChannels.includes(message.channel.id)) {
+        
         if (!client.userConversations) {
             client.userConversations = {};
         }
