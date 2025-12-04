@@ -112,3 +112,64 @@ module.exports = {
     }
 }
 
+if (interaction.commandName === 'passiar') {
+    const group = interaction.options.getSubcommandGroup(false); // 'channel' | 'user'
+    const sub = interaction.options.getSubcommand(false);        // 'start' | 'stop'
+
+    if (!group || !sub) {
+        await interaction.reply({
+            content: '❌ Invalid passiar command.',
+            ephemeral: true
+        });
+        return;
+    }
+
+    // Channel-level passiar
+    if (group === 'channel') {
+        const channelId = interaction.channel.id;
+
+        if (sub === 'start') {
+            if (!client.passiarChannels) client.passiarChannels = new Set();
+            client.passiarChannels.add(channelId);
+
+            await interaction.reply({
+                content: '✅ Passiar mode enabled for this channel. I will now respond to all messages here.',
+                ephemeral: true
+            });
+        } else if (sub === 'stop') {
+            if (client.passiarChannels) client.passiarChannels.delete(channelId);
+
+            await interaction.reply({
+                content: '🛑 Passiar mode disabled for this channel.',
+                ephemeral: true
+            });
+        }
+
+        return;
+    }
+
+    // User-level passiar
+    if (group === 'user') {
+        const targetUser = interaction.options.getUser('user') || interaction.user;
+        const userId = targetUser.id;
+
+        if (sub === 'start') {
+            if (!client.passiarUsers) client.passiarUsers = new Set();
+            client.passiarUsers.add(userId);
+
+            await interaction.reply({
+                content: `✅ Passiar mode enabled for <@${userId}>. I will respond to their messages automatically.`,
+                ephemeral: true
+            });
+        } else if (sub === 'stop') {
+            if (client.passiarUsers) client.passiarUsers.delete(userId);
+
+            await interaction.reply({
+                content: `🛑 Passiar mode disabled for <@${userId}>.`,
+                ephemeral: true
+            });
+        }
+
+        return;
+    }
+}

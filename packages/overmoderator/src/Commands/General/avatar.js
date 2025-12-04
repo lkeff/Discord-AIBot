@@ -45,12 +45,12 @@ module.exports = {
         .setImage(avatar);
 
         const row = new ActionRowBuilder()
-			.addComponents(
-				new ButtonBuilder()
-					.setLabel(buttonLabelText)
-                    .setURL(`${targetUser.displayAvatarURL(a => a.url)}`)
-					.setStyle(ButtonStyle.Link),
-			);
+    .addComponents(
+        new ButtonBuilder()
+            .setLabel(buttonLabelText)
+            .setURL(targetUser.displayAvatarURL({ size: 2048, dynamic: true }))
+            .setStyle(ButtonStyle.Link),
+    );
 
         interaction.reply({
             embeds: [m],
