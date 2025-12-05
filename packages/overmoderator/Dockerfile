@@ -1,4 +1,9 @@
-FROM node:18-alpine
+# Using Debian slim for better security patch coverage
+# Note: Base image may contain known vulnerabilities pending upstream patches
+FROM node:22-slim
+
+# Update system packages to fix vulnerabilities
+RUN apt-get update && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

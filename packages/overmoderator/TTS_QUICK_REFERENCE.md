@@ -1,14 +1,17 @@
-# 🎤 TTS Quick Reference Card
+<!-- markdownlint-disable MD041 -->
+# Overmoderator TTS Quick Reference
 
 ## 🚀 Quick Start (5 Minutes)
 
-### What's Already Working:
+### What's Already Working
+
 ✅ TTS Moderation with rate limiting  
 ✅ Statistics tracking  
 ✅ Admin monitoring tools  
 
-### Test It Now:
-```
+### Test It Now
+
+```bash
 /ttsstats view    → See current statistics
 /ttsstats config  → View configuration
 ```
@@ -41,7 +44,8 @@ npm start
 
 ## 🎮 User Commands
 
-### TTS Generation:
+### TTS Generation
+
 ```bash
 /tts speak <text> [language]   # Say something in voice channel
 /tts stop                      # Stop speaking
@@ -50,7 +54,8 @@ npm start
 /tts settings [volume] [speed] # Adjust playback
 ```
 
-### Admin Commands:
+### Admin Commands
+
 ```bash
 /ttsstats view    # View statistics
 /ttsstats reset   # Reset counters
@@ -61,7 +66,7 @@ npm start
 
 ## 🌍 Supported Languages
 
-```
+```text
 en-US  English (US)          ja-JP  Japanese
 en-GB  English (UK)          ko-KR  Korean
 es-ES  Spanish               zh-CN  Chinese (Simplified)
@@ -94,7 +99,7 @@ TTS_LOG_CHANNEL_ID=123456789
 
 ## 📊 Statistics Example
 
-```
+```text
 📊 TTS System Statistics
 
 🔇 Moderation Stats
@@ -121,23 +126,27 @@ Default Language: en-US
 ## 🐛 Common Issues
 
 ### "Voice features require @discordjs/voice"
+
 → Install packages: `npm install @discordjs/voice ...`
 
 ### TTS not moderating
+
 → Check `.env` has `OPENAI_API_KEY`
 
 ### Bot won't join voice
+
 → Check permissions: CONNECT + SPEAK  
 → Verify GuildVoiceStates intent
 
 ### Rate limiting too strict
+
 → Adjust `TTS_RATE_LIMIT` in .env
 
 ---
 
 ## 📁 Important Files
 
-```
+```text
 src/
 ├── Events/Moderation/
 │   └── ttsModeration.js       ← Enhanced moderation
@@ -159,19 +168,22 @@ Documentation:
 
 ## 🔑 Key Features
 
-### Security:
+### Security
+
 ✅ Content moderation  
 ✅ Rate limiting (3s cooldown)  
 ✅ Permission checks  
 ✅ API validation  
 
-### Performance:
+### Performance
+
 ✅ Result caching (60s)  
 ✅ Queue management  
 ✅ Auto-cleanup  
 ✅ Efficient logging  
 
-### Monitoring:
+### Monitoring
+
 ✅ Real-time statistics  
 ✅ Detailed logs  
 ✅ Admin dashboard  
@@ -220,6 +232,7 @@ Documentation:
 ## 🎉 What's Working Now
 
 Without any installation:
+
 - ✅ TTS message moderation
 - ✅ Rate limiting
 - ✅ Statistics tracking
@@ -228,6 +241,7 @@ Without any installation:
 - ✅ Logging
 
 With packages installed:
+
 - ✅ All of the above PLUS
 - ✅ TTS generation in voice
 - ✅ Multi-language support

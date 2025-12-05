@@ -23,7 +23,6 @@ if (process.env.DEFAULT_MODEL) {
     models.default = process.env.DEFAULT_MODEL;
 }
 
-<<<<<<< HEAD
 async function generateReplySuggestions(userText, count, stylePrompt) {
     try {
         const sys = 'You are a helpful assistant that crafts extremely concise, natural follow-up replies a Discord user might send next. Avoid emojis unless the user uses them. No punctuation if it reads fine without it.';
@@ -32,9 +31,11 @@ async function generateReplySuggestions(userText, count, stylePrompt) {
             temperature: 0.3,
             messages: [
                 { role: 'system', content: sys },
-                { role: 'user', content: `User said: "${userText}"
+                {
+                    role: 'user', content: `User said: "${userText}"
 ${stylePrompt}
-Return ${count} options as a numbered list, one per line, no extra commentary.` }
+Return ${count} options as a numbered list, one per line, no extra commentary.`
+                }
             ],
         });
         const text = res.choices?.[0]?.message?.content || '';
@@ -43,13 +44,10 @@ Return ${count} options as a numbered list, one per line, no extra commentary.` 
     } catch (e) { return []; }
 }
 
-const replyChannels = process.env.REPLY_CHANNEL.split(',');
-=======
 const replyChannels = (process.env.REPLY_CHANNEL || '')
     .split(',')
     .map((c) => c.trim())
     .filter((c) => c.length > 0);
->>>>>>> 3c6e92bde30488232d24530b3400f3377097f70f
 
 const openai = new OpenAI({
     apiKey: process.env.DEFAULT_API_KEY,
@@ -91,10 +89,10 @@ const replySuggestionsCount = process.env.REPLY_SUGGESTIONS_COUNT ? Math.min(5, 
 const replySuggestionsPrompt = process.env.REPLY_SUGGESTIONS_PROMPT || 'Generate a few very short, natural, non-spammy reply options the user might send next. Keep each to under 8 words.';
 
 const allowedShortTokens = new Set([
-    's','f','k','b','g','d','t','ty',
-    'ai','ei','ey','gi','ji','ia','ci','fi','di','si','pi','my'
+    's', 'f', 'k', 'b', 'g', 'd', 't', 'ty',
+    'ai', 'ei', 'ey', 'gi', 'ji', 'ia', 'ci', 'fi', 'di', 'si', 'pi', 'my'
 ]);
-const allowedWords = new Set(['air','sheer','cheer','dear']);
+const allowedWords = new Set(['air', 'sheer', 'cheer', 'dear']);
 
 function normalizeSF(text) {
     const t = (text || '').toLowerCase().trim();
@@ -184,7 +182,7 @@ let imageModel = '';
 
 if (specialModels.includes(defaultModel)) {
     imageModel = defaultModel;
-} 
+}
 
 else if (imageModelEnv && specialModels.includes(imageModelEnv)) {
     imageModel = imageModelEnv;
@@ -199,7 +197,7 @@ async function handleAudioAttachment(message, audioAttachment, conversationLog, 
         await message.reply(`❌ ${getText('common.error', message.author.id)}\n\`\`\`\nVOICE_INPUT=${process.env.VOICE_INPUT}\`\`\``);
         return true;
     }
-    
+
     try {
         const audioBuffer = await fetch(audioAttachment.url).then(res => res.buffer());
 
@@ -212,7 +210,7 @@ async function handleAudioAttachment(message, audioAttachment, conversationLog, 
                 if (!dsModelPath) throw new Error('VOICE_DS_MODEL_PATH is not set');
                 const model = new Deepspeech.Model(dsModelPath);
                 if (dsBeamWidth && Number.isInteger(dsBeamWidth) && model.setBeamWidth) {
-                    try { model.setBeamWidth(dsBeamWidth); } catch {}
+                    try { model.setBeamWidth(dsBeamWidth); } catch { }
                 }
                 if (dsScorerPath) {
                     model.enableExternalScorer(dsScorerPath);
@@ -223,7 +221,7 @@ async function handleAudioAttachment(message, audioAttachment, conversationLog, 
                         const [word, weightStr] = pair.split(':');
                         const weight = parseFloat(weightStr);
                         if (word && !isNaN(weight) && model.addHotWord) {
-                            try { model.addHotWord(word.trim(), weight); } catch {}
+                            try { model.addHotWord(word.trim(), weight); } catch { }
                         }
                     });
                 }
@@ -294,14 +292,14 @@ async function handleAudioAttachment(message, audioAttachment, conversationLog, 
                 clearInterval(typingInterval);
                 return true;
             }
-        } catch {}
-        
+        } catch { }
+
         const modelToUse = getModelForUser(message.author.id, client);
 
         const textOnlyLog = conversationLog.filter(log => typeof log.content === 'string');
         const totalTokens = encodeChat(textOnlyLog, 'gpt-3.5-turbo').length;
         const currentMessageTokens = encodeChat([{ role: 'user', content: finalText }], 'gpt-3.5-turbo').length;
-        
+
         if (totalTokens + currentMessageTokens >= MAX_TOKENS) {
             conversationLog = await handleConversationSummary(conversationLog, message, null, message.author.id);
         }
@@ -317,7 +315,7 @@ async function handleAudioAttachment(message, audioAttachment, conversationLog, 
                 const lastUserMsg = finalText || '';
                 const suggestions = await generateReplySuggestions(lastUserMsg, replySuggestionsCount, replySuggestionsPrompt);
                 if (suggestions && suggestions.length) {
-                    const lines = suggestions.map((s, i) => `${i+1}. ${s}`).join('\n');
+                    const lines = suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n');
                     await message.reply(`💬 Suggested quick replies:\n${lines}`);
                 }
             } catch (e) { /* ignore */ }
@@ -347,7 +345,7 @@ async function handlePdfAndImageAttachments(message, pdfAttachments, imageAttach
         await message.reply(errorMessage);
         return true;
     }
-    
+
     try {
         const textOnlyLog = conversationLog.filter(log => typeof log.content === 'string');
         const totalTokens = encodeChat(textOnlyLog, 'gpt-3.5-turbo').length;
@@ -390,7 +388,7 @@ async function handlePdfAttachmentsOnly(message, pdfAttachments, conversationLog
         await message.reply(`❌ ${getText('events.AICore.pdfInputDisabled', message.author.id)}\n\`\`\`\nPDF_INPUT=${process.env.PDF_INPUT}\`\`\``);
         return true;
     }
-    
+
     try {
         const textOnlyLog = conversationLog.filter(log => typeof log.content === 'string');
         const totalTokens = encodeChat(textOnlyLog, 'gpt-3.5-turbo').length;
@@ -399,10 +397,10 @@ async function handlePdfAttachmentsOnly(message, pdfAttachments, conversationLog
         if (totalTokens + currentMessageTokens >= MAX_TOKENS) {
             conversationLog = await handleConversationSummary(conversationLog, message, null, message.author.id);
         }
-        
+
         const modelToUse = getModelForUser(message.author.id, client);
         await sendStreamingResponse(message, message.channel, conversationLog, modelToUse, message.author, client, false, null, pdfAttachments);
-        
+
         clearInterval(typingInterval);
         return true;
     } catch (error) {
@@ -423,7 +421,7 @@ async function handleImageAttachments(message, imageAttachments, conversationLog
         }
         return true;
     }
-    
+
     const attachmentContents = imageAttachments.map(attachment => ({
         type: "image_url",
         image_url: {
@@ -485,7 +483,7 @@ async function handleTextMessage(message, conversationLog, messageContent, clien
         conversationLog = [];
         client.userConversations[message.author.id] = conversationLog;
     }
-    
+
     conversationLog.push({
         role: 'user',
         content: messageContent,
@@ -514,41 +512,22 @@ async function handleTextMessage(message, conversationLog, messageContent, clien
 }
 
 module.exports = {
-<<<<<<< HEAD
-  name: "messageCreate",
-  async execute(message, client) {
-    if (message.author.bot || message.interaction) return;
-    // initialize cooldown stores
-    if (!client.__omCooldowns) {
-        client.__omCooldowns = { users: new Map(), channels: new Map() };
-    }
-    const now = Date.now();
-    const lastUser = client.__omCooldowns.users.get(message.author.id) || 0;
-    const lastChannel = client.__omCooldowns.channels.get(message.channel.id) || 0;
-    if (now - lastUser < parseInt(process.env.USER_COOLDOWN_MS) || now - lastChannel < parseInt(process.env.CHANNEL_COOLDOWN_MS)) {
-        return; // skip to avoid spam-like rapid replies
-    }
-    client.__omCooldowns.users.set(message.author.id, now);
-    client.__omCooldowns.channels.set(message.channel.id, now);
-
-    if (message.mentions.has(client.user) && !message.mentions.everyone || replyChannels.includes(message.channel.id)) {
-        
-        if (!client.userConversations) {
-            client.userConversations = {};
-        }
-        
-        if (!client.userConversations[message.author.id]) {
-            await updateUserSystemPrompt(message.author.id, message, client);
-        }
-        
-        let conversationLog = client.userConversations[message.author.id];
-        let messageContent = '';
-        let attachments = [];
-=======
     name: "messageCreate",
     async execute(message, client) {
         if (message.author.bot || message.interaction) return;
->>>>>>> 3c6e92bde30488232d24530b3400f3377097f70f
+
+        // initialize cooldown stores
+        if (!client.__omCooldowns) {
+            client.__omCooldowns = { users: new Map(), channels: new Map() };
+        }
+        const now = Date.now();
+        const lastUser = client.__omCooldowns.users.get(message.author.id) || 0;
+        const lastChannel = client.__omCooldowns.channels.get(message.channel.id) || 0;
+        if (now - lastUser < parseInt(process.env.USER_COOLDOWN_MS) || now - lastChannel < parseInt(process.env.CHANNEL_COOLDOWN_MS)) {
+            return; // skip to avoid spam-like rapid replies
+        }
+        client.__omCooldowns.users.set(message.author.id, now);
+        client.__omCooldowns.channels.set(message.channel.id, now);
 
         const inPassiarChannel = client.passiarChannels && client.passiarChannels.has(message.channel.id);
         const inPassiarUser = client.passiarUsers && client.passiarUsers.has(message.author.id);
@@ -562,11 +541,11 @@ module.exports = {
             if (!client.userConversations) {
                 client.userConversations = {};
             }
-            
+
             if (!client.userConversations[message.author.id]) {
                 await updateUserSystemPrompt(message.author.id, message, client);
             }
-            
+
             let conversationLog = client.userConversations[message.author.id];
             let messageContent = '';
             let attachments = [];
@@ -590,7 +569,7 @@ module.exports = {
                             }
                         }
 
-                        if(referencedMessage.content) {
+                        if (referencedMessage.content) {
                             messageContent = `${getText('events.AICore.referencedUserSaid', message.author.id, {
                                 user: referencedMessage.member.displayName || referencedMessage.author.displayName,
                                 mention: referencedMessage.author
@@ -630,14 +609,14 @@ module.exports = {
                         return;
                     }
                 }
-                
+
                 // for pdf attachments
                 if (pdfAttachments.length > 0) {
                     if (await handlePdfAttachmentsOnly(message, pdfAttachments, conversationLog, messageContent, typingInterval, client)) {
                         return;
                     }
                 }
-                
+
                 // for image attachments
                 if (imageAttachments.length > 0) {
                     if (await handleImageAttachments(message, imageAttachments, conversationLog, messageContent, typingInterval, client)) {
