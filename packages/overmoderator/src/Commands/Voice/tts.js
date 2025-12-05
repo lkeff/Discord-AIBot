@@ -8,6 +8,8 @@
 
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { getText } = require('../../Functions/i18n');
+const voiceManager = require('../../Handlers/voiceHandler');
+const OpenAI = require('openai');
 
 // TTS Configuration
 const TTS_CONFIG = {
@@ -184,26 +186,83 @@ module.exports = {
 
     const text = interaction.options.getString('text');
     const language = interaction.options.getString('language') || TTS_CONFIG.defaultLanguage;
+    const style = interaction.options.getString('style') || 'neutral';
 
-    // TODO: Implement voice connection and TTS generation
-    // This requires @discordjs/voice package to be installed
-    await interaction.editReply({
-      content: `🎤 TTS Feature Coming Soon!\n\n` +
-               `**Text:** ${text}\n` +
-               `**Language:** ${TTS_CONFIG.languages[language].name}\n` +
-               `**Voice Channel:** ${voiceChannel.name}\n\n` +
-               `*Please install @discordjs/voice package to enable this feature.*`
-    });
+    let finalText = text;
+
+    // Optional happy narrator style using OpenAI
+    if (style === 'happy') {
+      try {
+        const apiKey = process.env.VOICE_API_KEY || process.env.DEFAULT_API_KEY;
+        const baseURL = process.env.VOICE_BASE_URL || process.env.DEFAULT_BASE_URL;
+
+        if (!apiKey) {
+          console.warn('[TTS Command] VOICE_API_KEY/DEFAULT_API_KEY missing, falling back to raw text');
+        } else {
+          const openai = new OpenAI({ apiKey, baseURL });
+
+          const completion = await openai.chat.completions.create({
+            model: process.env.VOICE_TEXT_MODEL || process.env.DEFAULT_MODEL || 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'You are a cheerful narrator. Rewrite the user message so it keeps the same factual content but sounds upbeat, kind and encouraging, even if the news is bad. Do not add emojis or markdown, keep it short and natural.',
+              },
+              { role: 'user', content: text },
+            ],
+            max_tokens: 120,
+            temperature: 0.8,
+          });
+
+          const rewritten = completion.choices?.[0]?.message?.content?.trim();
+          if (rewritten) {
+            finalText = rewritten;
+          }
+        }
+      } catch (err) {
+        console.error('[TTS Command] Error generating happy style text:', err);
+      }
+    }
+
+    try {
+      await voiceManager.speak(voiceChannel, finalText, {
+        language,
+        // Voice/model can be controlled by env: VOICE_TTS_MODEL / VOICE_MODEL
+      });
+
+      await interaction.editReply({
+        content:
+          `🎤 Speaking in **${voiceChannel.name}**\n` +
+          `🌍 Language: ${TTS_CONFIG.languages[language]?.name || language}\n` +
+          `🎭 Style: ${style === 'happy' ? 'Happy' : 'Neutral'}`,
+      });
+    } catch (err) {
+      console.error('[TTS Command] Error speaking in voice channel:', err);
+      await interaction.editReply({
+        content: '❌ Failed to play TTS in the voice channel.',
+      });
+    }
   },
 
   /**
    * Handle /tts stop command
    */
   async handleStop(interaction, client) {
-    // TODO: Implement stop functionality
+    const guildId = interaction.guild?.id;
+
+    if (!guildId) {
+      return await interaction.reply({
+        content: '❌ This command can only be used in a server.',
+        ephemeral: true,
+      });
+    }
+
+    voiceManager.stop(guildId);
+
     await interaction.reply({
       content: '⏹️ TTS playback stopped.',
-      ephemeral: true
+      ephemeral: true,
     });
   },
 
@@ -211,10 +270,20 @@ module.exports = {
    * Handle /tts skip command
    */
   async handleSkip(interaction, client) {
-    // TODO: Implement skip functionality
+    const guildId = interaction.guild?.id;
+
+    if (!guildId) {
+      return await interaction.reply({
+        content: '❌ This command can only be used in a server.',
+        ephemeral: true,
+      });
+    }
+
+    voiceManager.skip(guildId);
+
     await interaction.reply({
       content: '⏭️ Skipped current TTS.',
-      ephemeral: true
+      ephemeral: true,
     });
   },
 
@@ -222,10 +291,31 @@ module.exports = {
    * Handle /tts queue command
    */
   async handleQueue(interaction, client) {
-    // TODO: Implement queue display
+    const guildId = interaction.guild?.id;
+
+    if (!guildId) {
+      return await interaction.reply({
+        content: '❌ This command can only be used in a server.',
+        ephemeral: true,
+      });
+    }
+
+    const queue = voiceManager.getQueue(guildId);
+
+    if (!queue.length) {
+      return await interaction.reply({
+        content: '📋 **TTS Queue:**\nNo items in queue.',
+        ephemeral: true,
+      });
+    }
+
+    const preview = queue
+      .map((item, index) => `${index + 1}. ${item.text.slice(0, 80)}${item.text.length > 80 ? '…' : ''}`)
+      .join('\n');
+
     await interaction.reply({
-      content: '📋 **TTS Queue:**\nNo items in queue.',
-      ephemeral: true
+      content: `📋 **TTS Queue (${queue.length}):**\n${preview}`,
+      ephemeral: true,
     });
   },
 
