@@ -65,6 +65,7 @@ const {
 } = require('./utils');
 
 const { getText } = require('../../Functions/i18n');
+const { isChessVoiceMessage, handleChessVoiceMessage } = require('./chessMessageHandler');
 
 const MAX_TOKENS = Number(process.env.MAX_CONTEXT_TOKENS || 8192);
 const voiceApi = process.env.VOICE_API_KEY || process.env.DEFAULT_API_KEY;
@@ -595,6 +596,13 @@ module.exports = {
                 const audioAttachment = allAttachments.find(attachment => attachment.contentType?.startsWith('audio/'));
                 const pdfAttachments = allAttachments.filter(attachment => attachment.contentType === 'application/pdf');
                 const imageAttachments = allAttachments.filter(attachment => attachment.contentType?.includes('image'));
+
+                // Check for chess voice move first
+                if (audioAttachment && isChessVoiceMessage(message, client)) {
+                    clearInterval(typingInterval);
+                    await handleChessVoiceMessage(message, client);
+                    return;
+                }
 
                 // for audio attachment
                 if (audioAttachment) {
