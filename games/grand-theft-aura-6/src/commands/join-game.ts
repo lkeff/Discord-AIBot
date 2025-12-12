@@ -14,7 +14,7 @@ export const joinGameCommand = {
       // Create a new game and add the player
       gameManager.createGame(channel.id);
       const added = gameManager.addPlayer(channel.id, interaction.user);
-      
+
       if (added) {
         return interaction.reply({
           content: `🎮 **${interaction.user.username}** has created a new game lobby!\n\n` +
@@ -22,6 +22,10 @@ export const joinGameCommand = {
                    `🔪 Use \`/startgame\` when ready (min 2 players)`,
         });
       }
+      return interaction.reply({
+        content: '⚠️ Failed to create game. Please try again.',
+        ephemeral: true,
+      });
     }
 
     if (game.isActive) {

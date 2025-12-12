@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  # Discord Bot Service
+  discord-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: overmoderator-bot
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database connection
+      DATABASE_URL: postgresql://discord_bot:${DB_PASSWORD:-discord_bot_password}@postgres:5432/discord_bot
+      REDIS_URL: redis://redis:6379
+      # Node environment
+      NODE_ENV: ${NODE_ENV:-production}
+      # Discord configuration (from .env file)
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}
+      # OpenAI configuration
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    env_file:
+      - .env
+    networks:
+      - bot-network
+    volumes:
+      # Persist logs
+      - ./logs:/app/logs
+      # Persist audio cache
+      - ./audio-cache:/app/audio-cache
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('Bot health check')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-bookworm
+    container_name: overmoderator-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: discord_bot
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-discord_bot_password}
+      POSTGRES_DB: discord_bot
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Persist database data
+      - postgres-data:/var/lib/postgresql/data
+      # Init scripts (optional)
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    networks:
+      - bot-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U discord_bot -d discord_bot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-bookworm
+    container_name: overmoderator-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - bot-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
+
+  # pgAdmin for database management (optional, development only)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: overmoderator-pgadmin
+    restart: unless-stopped
+    profiles:
+      - dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@localhost}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    networks:
+      - bot-network
+    depends_on:
+      - postgres
+
+networks:
+  bot-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
