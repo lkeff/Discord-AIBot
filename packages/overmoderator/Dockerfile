@@ -1,54 +1,86 @@
-# Using Ubuntu LTS for better compatibility and database connectivity
-FROM ubuntu:22.04
+# ============================================================================
+# Overmoderator Discord Bot - Production Dockerfile
+# Using Node.js 22 with Ubuntu base for voice support
+# ============================================================================
 
-# Prevent interactive prompts during package installation
+# Build stage - use official Node.js image
+FROM node:22-bookworm AS builder
+
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies
-# - curl, ca-certificates, gnupg: for NodeSource setup
-# - postgresql-client, libpq-dev: database connectivity
-# - build-essential, python3: native module compilation
-# - ffmpeg: audio/voice processing
-# - iputils-ping, dnsutils: network debugging
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y \
-        curl \
-        ca-certificates \
-        gnupg \
-        postgresql-client \
-        libpq-dev \
-        build-essential \
-        python3 \
-        ffmpeg \
-        iputils-ping \
-        dnsutils \
-    && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
 
-# Install Node.js 22.x from NodeSource
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/*
-
-# Verify Node.js installation
-RUN node --version && npm --version
-
-WORKDIR /app
-
-# Copy package files first for better layer caching
+# Copy package files
 COPY package*.json ./
 
-# Install production dependencies
-RUN npm install --production
+# Install all dependencies (including dev for native module builds)
+RUN npm install --legacy-peer-deps
 
-# Copy application files
+# Copy source files
 COPY . .
 
-# Simple health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+# ============================================================================
+# Production stage
+# ============================================================================
+FROM node:22-bookworm-slim AS production
+
+LABEL maintainer="Overmoderator Team"
+LABEL description="Discord AI Bot with voice, moderation, and AI capabilities"
+LABEL version="1.0.0"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV NODE_ENV=production
+ENV TZ=UTC
+
+# Install runtime dependencies:
+# - postgresql-client: database connectivity
+# - ffmpeg, libopus0, libsodium23: audio/voice processing
+# - iputils-ping, dnsutils: network debugging
+# - tini: proper signal handling
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    postgresql-client \
+    ffmpeg \
+    libopus0 \
+    libsodium23 \
+    iputils-ping \
+    dnsutils \
+    tini \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user for security
+RUN groupadd -r botuser && useradd -r -g botuser botuser
+
+# Create app directory
+WORKDIR /app
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/audio-cache /app/temp && \
+    chown -R botuser:botuser /app
+
+# Copy built application from builder stage
+COPY --from=builder --chown=botuser:botuser /build/node_modules ./node_modules
+COPY --chown=botuser:botuser . .
+
+# Remove unnecessary files
+RUN rm -rf .git .github .env.example *.md tests __tests__ .eslintrc* .prettierrc* \
+    && rm -rf node_modules/.cache
+
+# Switch to non-root user
+USER botuser
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD node -e "console.log('healthy')" || exit 1
 
-# Expose port for health checks (optional)
+# Expose health check port
 EXPOSE 3000
 
+# Use tini as init system for proper signal handling
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
 # Start the bot
-CMD ["npm", "start"]
+CMD ["node", "--no-warnings", "index.js"]

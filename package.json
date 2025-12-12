@@ -1,32 +1,30 @@
 {
-  "name": "discord-bots-monorepo",
+  "name": "discord-aibot",
   "version": "1.0.0",
   "private": true,
-  "description": "A monorepo for managing multiple Discord bots.",
-  "author": "Javis",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Javis603/Discord-AIBot"
-  },
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "start": "npm run start -w overmoderator",
-    "dev": "npm run dev -w overmoderator",
-    "bots:start": "npm start --workspaces",
+    "start": "yarn workspaces run start",
+    "dev": "yarn workspaces run dev",
+    "build": "yarn workspaces run build",
     "test": "yarn workspaces run test",
     "lint:md": "markdownlint \"**/*.md\" --ignore node_modules"
   },
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.19.0",
-    "@google/gemini-cli": "github:google-gemini/gemini-cli",
-    "clang": "^1.0.9",
-    "discord-tts": "^1.2.2",
+    "discord.js": "^14.25.1",
+    "dotenv": "^17.2.3",
     "ffmpeg-static": "^5.3.0",
     "mongodb": "^7.0.0",
+    "mongoose": "^7.0.0",
     "rimraf": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
