@@ -2,14 +2,15 @@
   "name": "discord-aibot",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.0.0",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "start": "yarn workspaces run start",
-    "dev": "yarn workspaces run dev",
-    "build": "yarn workspaces run build",
-    "test": "yarn workspaces run test",
+    "start": "pnpm -r run start",
+    "dev": "pnpm -r run dev",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
     "lint:md": "markdownlint \"**/*.md\" --ignore node_modules"
   },
   "dependencies": {
