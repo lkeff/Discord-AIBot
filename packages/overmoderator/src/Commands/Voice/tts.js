@@ -16,7 +16,7 @@ const TTS_CONFIG = {
   maxLength: parseInt(process.env.TTS_MAX_LENGTH) || 200,
   defaultLanguage: process.env.TTS_DEFAULT_LANGUAGE || 'en-US',
   volume: parseFloat(process.env.TTS_VOLUME) || 1.0,
-  
+
   // Available languages/voices
   languages: {
     'en-US': { name: 'English (US)', voice: 'en-US' },
@@ -44,7 +44,7 @@ module.exports = {
     .setName('tts')
     .setDescription('Text-to-Speech commands')
     .setDefaultMemberPermissions(PermissionFlagsBits.Connect | PermissionFlagsBits.Speak)
-    
+
     // /tts speak <text> [language]
     .addSubcommand(subcommand =>
       subcommand
@@ -70,28 +70,28 @@ module.exports = {
             )
         )
     )
-    
+
     // /tts stop
     .addSubcommand(subcommand =>
       subcommand
         .setName('stop')
         .setDescription('Stop current TTS playback')
     )
-    
+
     // /tts skip
     .addSubcommand(subcommand =>
       subcommand
         .setName('skip')
         .setDescription('Skip current TTS and play next in queue')
     )
-    
+
     // /tts queue
     .addSubcommand(subcommand =>
       subcommand
         .setName('queue')
         .setDescription('Show current TTS queue')
     )
-    
+
     // /tts settings
     .addSubcommand(subcommand =>
       subcommand
@@ -148,11 +148,11 @@ module.exports = {
       }
     } catch (error) {
       console.error('[TTS Command] Error:', error);
-      
+
       const errorMessage = error.message.includes('voice')
         ? '❌ Please join a voice channel first!'
         : '❌ An error occurred while processing your TTS request.';
-      
+
       if (interaction.replied || interaction.deferred) {
         await interaction.editReply({ content: errorMessage });
       } else {
@@ -177,8 +177,8 @@ module.exports = {
 
     // Check bot permissions
     const permissions = voiceChannel.permissionsFor(client.user);
-    if (!permissions.has(PermissionFlagsBits.Connect) || 
-        !permissions.has(PermissionFlagsBits.Speak)) {
+    if (!permissions.has(PermissionFlagsBits.Connect) ||
+      !permissions.has(PermissionFlagsBits.Speak)) {
       return await interaction.editReply({
         content: '❌ I don\'t have permission to join or speak in your voice channel!'
       });
@@ -323,24 +323,38 @@ module.exports = {
    * Handle /tts settings command
    */
   async handleSettings(interaction, client) {
+    const guildId = interaction.guild?.id;
+    if (!guildId) {
+      return await interaction.reply({
+        content: '❌ This command can only be used in a server.',
+        ephemeral: true,
+      });
+    }
+
     const volume = interaction.options.getNumber('volume');
     const speed = interaction.options.getNumber('speed');
 
-    if (!volume && !speed) {
+    if (volume === null && speed === null) {
       // Display current settings
+      const settings = voiceManager.getSettings(guildId);
       await interaction.reply({
         content: `⚙️ **Current TTS Settings:**\n` +
-                 `🔊 Volume: ${TTS_CONFIG.volume}\n` +
-                 `⚡ Speed: 1.0\n` +
-                 `🌍 Default Language: ${TTS_CONFIG.languages[TTS_CONFIG.defaultLanguage].name}`,
+          `🔊 Volume: ${settings.volume}\n` +
+          `⚡ Speed: ${settings.speed}\n` +
+          `🌍 Default Language: ${TTS_CONFIG.languages[TTS_CONFIG.defaultLanguage].name}`,
         ephemeral: true
       });
     } else {
-      // TODO: Implement settings update
+      const updates = {};
+      if (volume !== null) updates.volume = volume;
+      if (speed !== null) updates.speed = speed;
+      voiceManager.updateSettings(guildId, updates);
+
+      const settings = voiceManager.getSettings(guildId);
       await interaction.reply({
         content: `✅ Settings updated!\n` +
-                 (volume ? `🔊 Volume: ${volume}\n` : '') +
-                 (speed ? `⚡ Speed: ${speed}` : ''),
+          (volume !== null ? `🔊 Volume: ${settings.volume}\n` : '') +
+          (speed !== null ? `⚡ Speed: ${settings.speed}` : ''),
         ephemeral: true
       });
     }
