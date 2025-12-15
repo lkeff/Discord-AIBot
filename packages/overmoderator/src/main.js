@@ -12,6 +12,7 @@ require('dotenv/config');
 const { Client, GatewayIntentBits, Partials, Collection, TextInputStyle, AttachmentBuilder, EmbedBuilder, WebhookClient, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require("discord.js");
 const { Guilds, GuildMembers, GuildMessages, MessageContent, GuildPresences } = GatewayIntentBits;
 const { User, Message, GuildMember, ThreadMember } = Partials;
+const mongoose = require('mongoose');
 
 const client = new Client({
     intents: [Guilds, GuildMembers, GuildMessages, MessageContent, GuildPresences],
@@ -24,6 +25,20 @@ client.ws.setMaxListeners(Infinity);
 const { loadEvents } = require("./Handlers/eventHandlers");
 const { loadUserLanguagePreferences } = require('shared');
 const { checkConnection, getAllUserSettings, getAllConversations, upsertSystemPromptConversation } = require('./db');
+
+async function initializeMongo() {
+    const uri = (process.env.MONGODB_URI || '').trim();
+    if (!uri) {
+        return;
+    }
+
+    try {
+        await mongoose.connect(uri);
+        console.log('[Database] MongoDB connected');
+    } catch (error) {
+        console.error('[Database] MongoDB connection failed:', error);
+    }
+}
 
 client.events = new Collection();
 client.commands = new Collection();
@@ -133,7 +148,8 @@ if (process.env.OFFLINE_MODE === 'true') {
     console.log('[INFO] PostgreSQL migration incomplete, running without database persistence');
 
     // Initialize without database
-    initializeUserSettings()
+    initializeMongo()
+        .then(() => initializeUserSettings())
         .then(() => {
             // 啟動機器人
             console.log('\x1b[35m%s\x1b[0m', `
@@ -152,7 +168,7 @@ if (process.env.OFFLINE_MODE === 'true') {
                 process.exit(1);
             }
 
-            client.login(1370657808055406612)
+            client.login(token)
                 .then(() => {
                     // 登錄成功後加載事件
                     loadEvents(client);
