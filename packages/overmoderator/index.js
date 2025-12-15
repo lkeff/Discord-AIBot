@@ -13,26 +13,38 @@ const axios = require('axios');
 const chokidar = require('chokidar');
 require('dotenv/config');
 
-const { setDefaultLanguage, getText } = require('shared');
+const { setDefaultLanguage, getText } = require('./src/Functions/i18n');
 const defaultLanguage = process.env.BOT_LANG || 'zh-TW';
 setDefaultLanguage(defaultLanguage);
 console.log(getText('system.defaultLang', defaultLanguage, { lang: defaultLanguage }));
 
 let webhookClient = null;
 if (process.env.LOG_WEBHOOK_URL) {
-    webhookClient = new WebhookClient({ url: process.env.LOG_WEBHOOK_URL });
+    const url = String(process.env.LOG_WEBHOOK_URL || '').trim();
+    const looksLikeDiscordWebhook = /^https?:\/\/[^\s]+\/api\/webhooks\//.test(url);
+
+    if (!looksLikeDiscordWebhook) {
+        console.error(getText('events.webhookError', defaultLanguage, { error: 'Invalid LOG_WEBHOOK_URL (skipping webhook logging)' }));
+    } else {
+        try {
+            webhookClient = new WebhookClient({ url });
+        } catch (error) {
+            console.error(getText('events.webhookError', defaultLanguage, { error: error.message }));
+            webhookClient = null;
+        }
+    }
 }
 
 let childProcess = null;
 
 function cleanup() {
     console.log(getText('events.shuttingDown', defaultLanguage));
-    
+
     if (watcher) {
         console.log(getText('system.stopFileWatch', defaultLanguage));
         watcher.close();
     }
-    
+
     if (childProcess) {
         console.log(getText('system.terminatingProcess', defaultLanguage));
         try {
@@ -43,11 +55,11 @@ function cleanup() {
                 });
             } else {
                 childProcess.kill('SIGTERM');
-                
+
                 setTimeout(() => {
                     try {
                         childProcess.kill('SIGKILL');
-                    } catch (e) {}
+                    } catch (e) { }
                     process.exit(0);
                 }, 5000);
             }
@@ -76,7 +88,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 async function sendWebhookMessage(content) {
     if (!webhookClient) return;
-    
+
     try {
         await new Promise(resolve => setTimeout(resolve, 100));
         await webhookClient.send(content);
@@ -87,12 +99,12 @@ async function sendWebhookMessage(content) {
 
 function sendRestartRequest(fileList) {
     if (!webhookClient) return;
-    
+
     const restartLabel = getText('components.buttons.restart', defaultLanguage);
     const reloadCommandLabel = getText('components.buttons.reload', defaultLanguage) + " " + getText('commands.command', defaultLanguage, { command: '' });
     const reloadEventLabel = getText('components.buttons.reload', defaultLanguage) + " " + getText('events.event', defaultLanguage, { event: '' });
     const fileChangedTitle = getText('events.fileChanged', defaultLanguage, { files: fileList });
-    
+
     const row = new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
@@ -111,7 +123,7 @@ function sendRestartRequest(fileList) {
 
     const em = new EmbedBuilder()
         .setTitle(fileChangedTitle);
-        
+
     webhookClient.send({
         embeds: [em],
         components: [row]
@@ -165,10 +177,10 @@ watcher.on('change', (path) => {
     changes[changeType].add(path);
 
     if (debounceTimer) clearTimeout(debounceTimer);
-    
+
     debounceTimer = setTimeout(() => {
         const summary = [];
-        
+
         if (changes.commands.size) summary.push(`Commands: ${Array.from(changes.commands).map(p => `\`${p}\``).join(', ')}`);
         if (changes.events.size) summary.push(`Events: ${Array.from(changes.events).map(p => `\`${p}\``).join(', ')}`);
         if (changes.source.size) summary.push(`Source: ${Array.from(changes.source).map(p => `\`${p}\``).join(', ')}`);
@@ -218,7 +230,7 @@ watcher.on('change', (path) => {
 
 watcher.on('error', error => {
     console.error(getText('events.fileWatchError', defaultLanguage, { error: error.message }));
-    
+
     if (webhookClient) {
         webhookClient.send({
             embeds: [
@@ -238,7 +250,7 @@ function runChildProcess() {
 
     async function processMessageQueue() {
         if (!webhookClient || isProcessing || messageQueue.length === 0) return;
-        
+
         isProcessing = true;
         while (messageQueue.length > 0) {
             const { content, type } = messageQueue.shift();
@@ -249,7 +261,7 @@ function runChildProcess() {
 
     childProcess.stdout.on('data', (data) => {
         process.stdout.write(data);
-        
+
         let message = data.toString();
         while (message.length > 0) {
             const chunk = message.slice(0, 1990);
@@ -261,7 +273,7 @@ function runChildProcess() {
 
     childProcess.stderr.on('data', (data) => {
         process.stderr.write(data);
-        
+
         let errorMessage = data.toString();
         while (errorMessage.length > 0) {
             const chunk = errorMessage.slice(0, 1985);
@@ -278,7 +290,7 @@ function runChildProcess() {
             type: code === 0 ? 'info' : 'error'
         });
         await processMessageQueue();
-    
+
         // Restart logic
         if (code === 990) {
             console.log(getText('system.receivedRestartSignal', defaultLanguage));
@@ -287,10 +299,10 @@ function runChildProcess() {
             console.log(getText('system.abnormalExit', defaultLanguage, { code }));
             setTimeout(() => runChildProcess(), 5000);
         }
-        
+
         childProcess = null;
     });
-    
+
     childProcess.on('error', (error) => {
         console.error(getText('system.childProcessError', defaultLanguage, { error }));
         messageQueue.push({

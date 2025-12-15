@@ -23,7 +23,7 @@ require('events').EventEmitter.setMaxListeners(Infinity);
 client.ws.setMaxListeners(Infinity);
 
 const { loadEvents } = require("./Handlers/eventHandlers");
-const { loadUserLanguagePreferences } = require('shared');
+const { loadUserLanguagePreferences } = require('./Functions/i18n');
 const { checkConnection, getAllUserSettings, getAllConversations, upsertSystemPromptConversation } = require('./db');
 
 async function initializeMongo() {

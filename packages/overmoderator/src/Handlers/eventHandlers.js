@@ -7,7 +7,7 @@
  */
 const path = require('path');
 const ascii = require("ascii-table");
-const { loadFiles } = require("shared");
+const { loadFiles } = require("../Functions/fileLoader");
 
 async function loadEvents(client) {
     console.time("Events Loaded");
@@ -15,7 +15,7 @@ async function loadEvents(client) {
     const table = new ascii().setHeading("Events", "Status");
     client.events = new Map();
 
-    const files = await loadFiles("src/Events"); 
+    const files = await loadFiles("src/Events");
 
     for (const file of files) {
         try {
