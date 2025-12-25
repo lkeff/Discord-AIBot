@@ -12,7 +12,8 @@
             "program": "${fileDirname}"
         },
         {
-            "name": "Attach Overmoderator (9230)",
+            "name": "Attach Overmoderatorimport {} from '@google/gemini-cli';
+",
             "type": "node",
             "request": "attach",
             "port": 9230,

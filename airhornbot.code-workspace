@@ -7,11 +7,25 @@
 			"path": "../calm-discord-bot"
 		},
 		{
+			"path": "../DeepSpeech"
+		},
+		{
 			"path": "."
+		},
+		{
+			"path": "../electron"
+		},
+		{
+			"path": "../last-fm"
+		},
+		{
+			"path": "../lkeff-listen"
+		},
+		{
+			"path": "../whisper"
 		}
 	],
 	"settings": {
-		"debug.allowBreakpointsEverywhere": true,
-		"files.autoGuessEncoding": true
+		"powershell.cwd": "calm-discord-bot"
 	}
 }
