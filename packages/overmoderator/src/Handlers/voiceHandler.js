@@ -29,9 +29,9 @@
  * const { promisify } = require('util');
  */
 
-const { 
-  joinVoiceChannel, 
-  createAudioPlayer, 
+const {
+  joinVoiceChannel,
+  createAudioPlayer,
   createAudioResource,
   AudioPlayerStatus,
   VoiceConnectionStatus,
@@ -40,11 +40,13 @@ const {
   StreamType
 } = require('@discordjs/voice');
 const { createWriteStream, unlinkSync } = require('fs');
+const { spawn } = require('child_process');
 const { pipeline } = require('stream');
 const { promisify } = require('util');
 const path = require('path');
 const os = require('os');
 const OpenAI = require('openai');
+const ffmpegPath = require('ffmpeg-static');
 
 const streamPipeline = promisify(pipeline);
 
@@ -59,7 +61,7 @@ class VoiceManager {
     this.queues = new Map();      // guildId -> Queue[]
     this.settings = new Map();    // guildId -> Settings
     this.timeouts = new Map();    // guildId -> Timeout
-    
+
     // Default settings
     this.defaultSettings = {
       volume: 1.0,
@@ -98,7 +100,7 @@ class VoiceManager {
    */
   async joinChannel(channel) {
     console.log(`[Voice] Joining channel: ${channel.name} (${channel.id})`);
-    
+
     if (this.connections.has(channel.guild.id)) {
       this.resetIdleTimeout(channel.guild.id);
       return this.connections.get(channel.guild.id);
@@ -200,7 +202,7 @@ class VoiceManager {
 
     const ttsRequest = queue.shift();
     const player = this.players.get(guildId);
-    
+
     if (!player) {
       console.error(`[Voice] No player found for guild ${guildId}`);
       return;
@@ -234,12 +236,49 @@ class VoiceManager {
         createWriteStream(filePath)
       );
 
-      const resource = createAudioResource(filePath, {
-        inputType: StreamType.Arbitrary,
-        inlineVolume: true
-      });
-
       const settings = this.getSettings(guildId);
+      const cleanupTemp = () => {
+        try {
+          unlinkSync(filePath);
+        } catch {
+          // ignore
+        }
+      };
+
+      let resource;
+      if (settings.speed !== 1.0 && ffmpegPath) {
+        const ffmpeg = spawn(ffmpegPath, [
+          '-hide_banner',
+          '-loglevel',
+          'error',
+          '-i',
+          filePath,
+          '-filter:a',
+          `atempo=${settings.speed}`,
+          '-f',
+          's16le',
+          '-ar',
+          '48000',
+          '-ac',
+          '2',
+          'pipe:1',
+        ], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+        ffmpeg.on('close', cleanupTemp);
+        ffmpeg.on('error', cleanupTemp);
+
+        resource = createAudioResource(ffmpeg.stdout, {
+          inputType: StreamType.Raw,
+          inlineVolume: true,
+        });
+      } else {
+        resource = createAudioResource(filePath, {
+          inputType: StreamType.Arbitrary,
+          inlineVolume: true,
+        });
+        resource.playStream.on('end', cleanupTemp);
+      }
+
       if (resource.volume && typeof resource.volume.setVolume === 'function') {
         resource.volume.setVolume(settings.volume);
       }
@@ -247,14 +286,6 @@ class VoiceManager {
       player.play(resource);
 
       console.log(`[Voice] Playing TTS in guild ${guildId}: "${ttsRequest.text.substring(0, 50)}..."`);
-
-      resource.playStream.on('end', () => {
-        try {
-          unlinkSync(filePath);
-        } catch (err) {
-          // ignore
-        }
-      });
     } catch (error) {
       console.error(`[Voice] Error playing TTS:`, error);
       // Try next item
@@ -313,7 +344,7 @@ class VoiceManager {
     }
 
     const settings = this.getSettings(guildId);
-    
+
     // Set new timeout
     const timeout = setTimeout(() => {
       console.log(`[Voice] Idle timeout reached for guild ${guildId}`);

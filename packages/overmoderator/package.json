@@ -2,10 +2,23 @@
   "name": "overmoderator",
   "version": "1.0.0",
   "main": "index.js",
+  "bin": {
+    "overmoderator": "./cli.js",
+    "om": "./cli.js"
+  },
   "scripts": {
     "start": "node --no-warnings index.js",
     "dev": "node index.js",
-    "test": "node -r dotenv/config ./node_modules/jest/bin/jest.js --config=jest.config.js"
+    "cli": "node cli.js",
+    "test": "node -r dotenv/config ./node_modules/jest/bin/jest.js --config=jest.config.js",
+    "lint": "npx markdownlint '**/*.md' --ignore node_modules",
+    "lint:fix": "npx markdownlint '**/*.md' --ignore node_modules --fix",
+    "db:status": "node cli.js db status",
+    "db:migrate": "node cli.js db migrate",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:build": "docker build -t overmoderator .",
+    "docker:logs": "docker-compose logs -f"
   },
   "dependencies": {
     "@derockdev/discord-components-react": "^3.6.1",

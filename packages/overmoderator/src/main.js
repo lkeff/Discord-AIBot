@@ -12,9 +12,10 @@ require('dotenv/config');
 const { Client, GatewayIntentBits, Partials, Collection, TextInputStyle, AttachmentBuilder, EmbedBuilder, WebhookClient, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require("discord.js");
 const { Guilds, GuildMembers, GuildMessages, MessageContent, GuildPresences } = GatewayIntentBits;
 const { User, Message, GuildMember, ThreadMember } = Partials;
+const mongoose = require('mongoose');
 
-const client = new Client({ 
-    intents: [Guilds, GuildMembers, GuildMessages, MessageContent, GuildPresences], 
+const client = new Client({
+    intents: [Guilds, GuildMembers, GuildMessages, MessageContent, GuildPresences],
     partials: [User, Message, GuildMember, ThreadMember]
 });
 
@@ -22,9 +23,22 @@ require('events').EventEmitter.setMaxListeners(Infinity);
 client.ws.setMaxListeners(Infinity);
 
 const { loadEvents } = require("./Handlers/eventHandlers");
-const { loadUserLanguagePreferences } = require('shared');
-// TODO: PostgreSQL migration incomplete - temporarily disabled
-// const { pool, getAllUserSettings, getAllConversations, upsertSystemPromptConversation, deleteOldConversations } = require('./db');
+const { loadUserLanguagePreferences } = require('./Functions/i18n');
+const { checkConnection, getAllUserSettings, getAllConversations, upsertSystemPromptConversation } = require('./db');
+
+async function initializeMongo() {
+    const uri = (process.env.MONGODB_URI || '').trim();
+    if (!uri) {
+        return;
+    }
+
+    try {
+        await mongoose.connect(uri);
+        console.log('[Database] MongoDB connected');
+    } catch (error) {
+        console.error('[Database] MongoDB connection failed:', error);
+    }
+}
 
 client.events = new Collection();
 client.commands = new Collection();
@@ -43,43 +57,43 @@ client.userConversations = {};
 client.userNetSearchEnabled = new Map();
 client.userDeepThinkingEnabled = new Map();
 
-const {specialUsers} = require('./Events/AICore/models');
+const { specialUsers } = require('./Events/AICore/models');
 
 async function initializeUserSettings() {
     try {
-        // TODO: PostgreSQL migration incomplete - using in-memory only for now
-        console.log('[Database] PostgreSQL migration incomplete, using in-memory settings');
-        
-        /* 
-        // 載入所有用戶設置 (Postgres)
-        const settings = await getAllUserSettings();
-        settings.forEach(setting => {
-            client.userModels[setting.user_id] = setting.model;
-            client.userNetSearchEnabled.set(setting.user_id, setting.net_search_enabled);
-            client.userDeepThinkingEnabled.set(setting.user_id, setting.deep_thinking_enabled);
-        });
+        const postgresAvailable = await checkConnection();
+        if (postgresAvailable) {
+            console.log('[Database] PostgreSQL available, loading settings and conversations');
 
-        // 載入所有對話記錄 (Postgres)
-        const conversations = await getAllConversations();
-        conversations.forEach(row => {
-            if (!client.userConversations[row.user_id]) {
-                client.userConversations[row.user_id] = [];
-            }
-            client.userConversations[row.user_id].push(row.content);
-        });
-        */
+            const settings = await getAllUserSettings();
+            settings.forEach(setting => {
+                client.userModels[setting.user_id] = setting.model;
+                client.userNetSearchEnabled.set(setting.user_id, setting.net_search_enabled);
+                client.userDeepThinkingEnabled.set(setting.user_id, setting.deep_thinking_enabled);
+            });
+
+            const conversations = await getAllConversations();
+            conversations.forEach(row => {
+                if (!client.userConversations[row.user_id]) {
+                    client.userConversations[row.user_id] = [];
+                }
+                client.userConversations[row.user_id].push(row.content);
+            });
+        } else {
+            console.log('[Database] PostgreSQL not configured/reachable, using in-memory settings');
+        }
 
         // 初始化特定用戶設置
         for (const [userId, config] of Object.entries(specialUsers)) {
             // 檢查是否已有對話記錄
             if (!client.userConversations[userId]) {
-                const webSearchStatus = client.userNetSearchEnabled.get(userId) 
-    ? "開啟" 
-    : "關閉，需要用戶在多功能選單裏面打開";
-    
-const deepThinkingStatus = client.userDeepThinkingEnabled.get(userId) 
-    ? "開啟" 
-    : "關閉，需要用戶在多功能選單裏面打開";
+                const webSearchStatus = client.userNetSearchEnabled.get(userId)
+                    ? "開啟"
+                    : "關閉，需要用戶在多功能選單裏面打開";
+
+                const deepThinkingStatus = client.userDeepThinkingEnabled.get(userId)
+                    ? "開啟"
+                    : "關閉，需要用戶在多功能選單裏面打開";
 
                 // Check if role exists before using it
                 const roleContent = roles[config.role];
@@ -97,12 +111,14 @@ const deepThinkingStatus = client.userDeepThinkingEnabled.get(userId)
                         .replace(/{DeepThinking}/g, deepThinkingStatus)
                 };
 
-                // 只在沒有現有對話記錄時創建新的 (in-memory for now)
-                // await upsertSystemPromptConversation(userId, systemPrompt);
+                // 只在沒有現有對話記錄時創建新的
+                if (postgresAvailable) {
+                    await upsertSystemPromptConversation(userId, systemPrompt);
+                }
                 client.userConversations[userId] = [systemPrompt];
             }
         }
-        
+
         // 載入用戶語言偏好設置
         await loadUserLanguagePreferences();
         console.log('已載入用戶語言偏好設置');
@@ -130,9 +146,10 @@ if (process.env.OFFLINE_MODE === 'true') {
 } else {
     // TODO: PostgreSQL migration incomplete - running without database
     console.log('[INFO] PostgreSQL migration incomplete, running without database persistence');
-    
+
     // Initialize without database
-    initializeUserSettings()
+    initializeMongo()
+        .then(() => initializeUserSettings())
         .then(() => {
             // 啟動機器人
             console.log('\x1b[35m%s\x1b[0m', `
@@ -151,7 +168,7 @@ if (process.env.OFFLINE_MODE === 'true') {
                 process.exit(1);
             }
 
-            client.login(1370657808055406612)
+            client.login(token)
                 .then(() => {
                     // 登錄成功後加載事件
                     loadEvents(client);
@@ -164,7 +181,7 @@ if (process.env.OFFLINE_MODE === 'true') {
             console.error('初始化錯誤:', error);
             process.exit(1);
         });
-    
+
     /* PostgreSQL connection code - disabled until migration complete
     if (!process.env.PGHOST || !process.env.PGUSER || !process.env.PGDATABASE) {
         console.error('Missing Postgres configuration (PGHOST, PGUSER, PGDATABASE)');

@@ -37,6 +37,17 @@ CREATE TABLE IF NOT EXISTS bot.guilds (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- User settings for storing per-user preferences/feature flags
+CREATE TABLE IF NOT EXISTS bot.user_settings (
+    user_id VARCHAR(20) PRIMARY KEY,
+    model VARCHAR(50) DEFAULT 'default',
+    net_search_enabled BOOLEAN DEFAULT FALSE,
+    deep_thinking_enabled BOOLEAN DEFAULT FALSE,
+    language VARCHAR(10),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Moderation logs table
 CREATE TABLE IF NOT EXISTS bot.moderation_logs (
     id SERIAL PRIMARY KEY,
@@ -65,10 +76,10 @@ CREATE TABLE IF NOT EXISTS bot.voice_logs (
 CREATE TABLE IF NOT EXISTS bot.conversations (
     id SERIAL PRIMARY KEY,
     guild_id VARCHAR(20),
-    channel_id VARCHAR(20) NOT NULL,
+    channel_id VARCHAR(20),
     user_id VARCHAR(20) NOT NULL,
     role VARCHAR(20) NOT NULL,  -- 'user', 'assistant', 'system'
-    content TEXT NOT NULL,
+    content JSONB NOT NULL,
     tokens_used INTEGER,
     model VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -105,6 +116,12 @@ CREATE TRIGGER update_users_updated_at
 DROP TRIGGER IF EXISTS update_guilds_updated_at ON bot.guilds;
 CREATE TRIGGER update_guilds_updated_at
     BEFORE UPDATE ON bot.guilds
+    FOR EACH ROW
+    EXECUTE FUNCTION bot.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_settings_updated_at ON bot.user_settings;
+CREATE TRIGGER update_user_settings_updated_at
+    BEFORE UPDATE ON bot.user_settings
     FOR EACH ROW
     EXECUTE FUNCTION bot.update_updated_at_column();
 
