@@ -182,7 +182,6 @@ if (process.env.OFFLINE_MODE === 'true') {
             process.exit(1);
         });
 
-    /* PostgreSQL connection code - disabled until migration complete
     if (!process.env.PGHOST || !process.env.PGUSER || !process.env.PGDATABASE) {
         console.error('Missing Postgres configuration (PGHOST, PGUSER, PGDATABASE)');
         process.exit(1);
@@ -201,7 +200,6 @@ if (process.env.OFFLINE_MODE === 'true') {
             console.error('數據庫連接錯誤:', error);
             process.exit(1);
         });
-    */
 }
 // Conversation / passiar mode
 client.passiarChannels = new Set();   // channels with always-on conversation mode
