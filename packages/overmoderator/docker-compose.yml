@@ -98,6 +98,7 @@ services:
     tty: true
     environment:
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       WORKSPACE_ROOT: /workspace
       NODE_ENV: production
     volumes:
