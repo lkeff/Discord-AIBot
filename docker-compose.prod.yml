@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: discord-aibot
+    restart: always
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://${DB_USER:-admin}:${DB_PASSWORD:-password}@db:27017/${DB_NAME:-discord_ai}?authSource=admin
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - bot_logs:/app/logs
+      - bot_data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - aibot_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    expose:
+      - "3000"
+      - "8000"
+
+  db:
+    image: mongo:7-alpine
+    container_name: discord-aibot-db
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-password}
+      MONGO_INITDB_DATABASE: ${DB_NAME:-discord_ai}
+    volumes:
+      - db_data:/data/db
+      - db_config:/data/configdb
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - aibot_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+volumes:
+  db_data:
+    driver: local
+  db_config:
+    driver: local
+  bot_logs:
+    driver: local
+  bot_data:
+    driver: local
+
+networks:
+  aibot_network:
+    driver: bridge
