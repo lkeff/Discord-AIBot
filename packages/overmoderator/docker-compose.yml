@@ -85,6 +85,34 @@ services:
         max-file: "3"
 
   # ==========================================================================
+  # Sequential Thinking MCP Server - reasoning sidecar
+  # ==========================================================================
+  sequential-thinking-mcp:
+    build:
+      context: ../../sequential-thinking-mcp
+      dockerfile: Dockerfile
+    container_name: overmoderator-mcp
+    image: sequential-thinking-mcp:latest
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    volumes:
+      - mcp-sessions:/app/data
+    networks:
+      - bot-network
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'node dist/index.js' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # ==========================================================================
   # MongoDB Database (Primary database for bot data)
   # ==========================================================================
   mongodb:
@@ -247,4 +275,6 @@ volumes:
   audio-cache:
     driver: local
   bot-temp:
+    driver: local
+  mcp-sessions:
     driver: local
