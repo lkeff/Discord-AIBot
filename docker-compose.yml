@@ -34,7 +34,7 @@ services:
         - action: rebuild
           path: ./package.json
 
-  # Sequential Thinking MCP Server - reasoning sidecar for all bots
+  # Sequential Thinking MCP Server - self-sufficient reasoning sidecar
   sequential-thinking-mcp:
     build:
       context: ./packages/sequential-thinking-mcp
@@ -44,8 +44,14 @@ services:
     restart: unless-stopped
     stdin_open: true
     tty: true
+    environment:
+      DISCORD_BOT_TOKEN: ${DISCORD_TOKEN:-}
+      WORKSPACE_ROOT: /workspace
+      NODE_ENV: production
     volumes:
       - mcp-sessions:/app/data
+      # Mount all bot source trees so MCP can scan/refactor
+      - ./:/workspace/discord-aibot:ro
     networks:
       - discord-network
     healthcheck:
@@ -57,8 +63,8 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "5m"
-        max-file: "2"
+        max-size: "10m"
+        max-file: "3"
 
   # Optional: MongoDB for data persistence
   mongodb:

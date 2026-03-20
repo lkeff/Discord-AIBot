@@ -85,7 +85,7 @@ services:
         max-file: "3"
 
   # ==========================================================================
-  # Sequential Thinking MCP Server - reasoning sidecar
+  # Sequential Thinking MCP Server - self-sufficient reasoning sidecar
   # ==========================================================================
   sequential-thinking-mcp:
     build:
@@ -96,8 +96,13 @@ services:
     restart: unless-stopped
     stdin_open: true
     tty: true
+    environment:
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      WORKSPACE_ROOT: /workspace
+      NODE_ENV: production
     volumes:
       - mcp-sessions:/app/data
+      - ./:/workspace/overmoderator:ro
     networks:
       - bot-network
     healthcheck:
@@ -109,8 +114,8 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "5m"
-        max-file: "2"
+        max-size: "10m"
+        max-file: "3"
 
   # ==========================================================================
   # MongoDB Database (Primary database for bot data)
