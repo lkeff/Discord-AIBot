@@ -9,8 +9,8 @@ RUN apk add --no-cache python3 make g++
 # Copy package files (best layer caching)
 COPY package*.json pnpm-lock.yaml ./
 
-# Install dependencies with exact pnpm version
-RUN npm install -g pnpm@10.0.0 && \
+# Install dependencies with pnpm via corepack (built into Node 20, honors packageManager field)
+RUN corepack enable && corepack prepare pnpm@10.0.0 --activate && \
     pnpm install --frozen-lockfile
 
 # Copy source code
