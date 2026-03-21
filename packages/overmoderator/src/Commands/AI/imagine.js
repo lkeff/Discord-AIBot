@@ -6,8 +6,8 @@
  * @copyright Copyright (c) 2025
  */
 require("dotenv").config();
-const { 
-  SlashCommandBuilder, 
+const {
+  SlashCommandBuilder,
   EmbedBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -18,6 +18,8 @@ const {
 } = require("discord.js");
 const fetch = require('node-fetch');
 const { getText } = require('../../Functions/i18n');
+const { validatePromptInput, replyWithError } = require('../../Utils/validation');
+const { checkRateLimit } = require('../../Utils/rateLimiter');
 
 const contextObj = {
   userId: 'system',
@@ -232,20 +234,36 @@ module.exports = {
           guildId: interaction.guildId
       };
 
+      // Rate limit check before deferring to avoid wasting interactions
+      const { allowed, retryAfterMs } = checkRateLimit(interaction.user.id);
+      if (!allowed) {
+        const seconds = Math.ceil((retryAfterMs ?? 60000) / 1000);
+        return await replyWithError(interaction, `You are sending requests too quickly. Please wait ${seconds} seconds.`);
+      }
+
       await interaction.deferReply();
-      
+
       const prompt = interaction.options.getString("prompt");
       const size = interaction.options.getString("size") || SIZES.square.value;
       const style = interaction.options.getString("style") || '';
       const enhance = interaction.options.getBoolean("enhance") ?? true;
       const safeMode = !interaction.channel.nsfw;
-      
+
       const sizeDisplay = Object.values(SIZES).find(s => s.value === size)?.name || size;
+
+      // Validate prompt input
+      const validation = validatePromptInput(prompt || '');
+      if (!validation.valid) {
+        return await interaction.editReply({
+          content: validation.error,
+          flags: MessageFlags.Ephemeral
+        });
+      }
 
       if (!prompt || prompt.length > 1000) {
         return await interaction.editReply({
           content: getText('commands.imagine.messages.invalidPrompt', contextObj, { default: "提示詞無效或太長（限制1000字以內）。" }),
-          flags: MessageFlags.Ephemeral 
+          flags: MessageFlags.Ephemeral
         });
       }
 

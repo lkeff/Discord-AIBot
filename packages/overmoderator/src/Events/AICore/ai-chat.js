@@ -66,6 +66,8 @@ const {
 
 const { getText } = require('../../Functions/i18n');
 const { isChessVoiceMessage, handleChessVoiceMessage } = require('./chessMessageHandler');
+const { validatePromptInput } = require('../../Utils/validation');
+const { checkRateLimit } = require('../../Utils/rateLimiter');
 
 const MAX_TOKENS = Number(process.env.MAX_CONTEXT_TOKENS || 8192);
 const voiceApi = process.env.VOICE_API_KEY || process.env.DEFAULT_API_KEY;
@@ -524,11 +526,21 @@ module.exports = {
         const now = Date.now();
         const lastUser = client.__omCooldowns.users.get(message.author.id) || 0;
         const lastChannel = client.__omCooldowns.channels.get(message.channel.id) || 0;
-        if (now - lastUser < parseInt(process.env.USER_COOLDOWN_MS) || now - lastChannel < parseInt(process.env.CHANNEL_COOLDOWN_MS)) {
+        const userCooldown = parseInt(process.env.USER_COOLDOWN_MS, 10) || userCooldownMs;
+        const channelCooldown = parseInt(process.env.CHANNEL_COOLDOWN_MS, 10) || channelCooldownMs;
+        if (now - lastUser < userCooldown || now - lastChannel < channelCooldown) {
             return; // skip to avoid spam-like rapid replies
         }
         client.__omCooldowns.users.set(message.author.id, now);
         client.__omCooldowns.channels.set(message.channel.id, now);
+
+        // Per-user rate limit (max requests per minute)
+        const { allowed: withinLimit, retryAfterMs } = checkRateLimit(message.author.id);
+        if (!withinLimit) {
+            const seconds = Math.ceil((retryAfterMs ?? 60000) / 1000);
+            await message.reply({ content: `You are sending messages too quickly. Please wait ${seconds} seconds.` });
+            return;
+        }
 
         const inPassiarChannel = client.passiarChannels && client.passiarChannels.has(message.channel.id);
         const inPassiarUser = client.passiarUsers && client.passiarUsers.has(message.author.id);
@@ -585,6 +597,15 @@ module.exports = {
                 }
             } else {
                 messageContent = message.content;
+            }
+
+            // Validate message content for injection patterns
+            if (messageContent) {
+                const promptValidation = validatePromptInput(messageContent);
+                if (!promptValidation.valid) {
+                    await message.reply({ content: `Cannot process message: ${promptValidation.error}` });
+                    return;
+                }
             }
 
             if (message.attachments.size > 0 || attachments.length > 0) {

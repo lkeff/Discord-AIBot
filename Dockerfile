@@ -1,5 +1,5 @@
 # Multi-stage build for Discord-AIBot - Production Optimized
-FROM node:20-alpine AS builder
+FROM node:20.18-alpine3.20 AS builder
 
 WORKDIR /app
 
@@ -16,11 +16,11 @@ RUN corepack enable && corepack prepare pnpm@10.0.0 --activate && \
 # Copy source code
 COPY . .
 
-# Generate prisma client if needed (don't suppress errors)
-RUN pnpm run db:generate || echo "No db:generate script"
+# Generate prisma client if present (script must exist for this to run)
+RUN if pnpm run --if-present db:generate; then echo "db:generate completed"; fi
 
-# Build application
-RUN pnpm run build || echo "No build script"
+# Build application if script exists
+RUN if pnpm run --if-present build; then echo "build completed"; fi
 
 # Remove dev dependencies from builder
 RUN pnpm prune --prod
@@ -28,7 +28,7 @@ RUN pnpm prune --prod
 # ─────────────────────────────────────────
 # Production stage - minimal image
 # ─────────────────────────────────────────
-FROM node:20-alpine
+FROM node:20.18-alpine3.20
 
 WORKDIR /app
 
@@ -48,10 +48,12 @@ COPY --from=builder /app/package*.json /app/pnpm-lock.yaml ./
 # Copy production dependencies
 COPY --from=builder /app/node_modules ./node_modules
 
-# Copy built artifacts (only if they exist)
-COPY --from=builder /app/dist ./dist 2>/dev/null || true
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma 2>/dev/null || true
-COPY --chown=botuser:botuser prisma ./prisma 2>/dev/null || true
+# Copy built artifacts if they exist (use conditional copy via shell)
+RUN mkdir -p /app/dist
+COPY --from=builder /app/dist /app/dist
+
+# Copy prisma files if present
+COPY --chown=botuser:botuser --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
 
 # Set environment variables
 ENV NODE_ENV=production \

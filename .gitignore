@@ -1,6 +1,9 @@
 .DS_Store
 node_modules/
 .env
+.env.*
+!.env.*.example
+!.env.example
 config.json
 backup/
 ecosystem.config.js
@@ -19,3 +22,12 @@ roles-save.yaml
 .vscode
 node_modules
 .env.template
+
+# Key and certificate files
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+secrets/
