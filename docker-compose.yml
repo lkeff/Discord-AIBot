@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: discord-aibot
-    image: discord-aibot:latest
+    image: discord-aibot:${BOT_VERSION:-latest}
     restart: unless-stopped
     env_file:
       - .env
@@ -16,6 +16,10 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./logs:/app/logs
     networks:
@@ -70,7 +74,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Optional: MongoDB for data persistence
+  # MongoDB for data persistence
   mongodb:
     image: mongo:7-alpine
     container_name: discord-aibot-db
@@ -82,8 +86,6 @@ services:
       - mongo-data:/data/db
     networks:
       - discord-network
-    ports:
-      - "27017:27017"
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 10s
