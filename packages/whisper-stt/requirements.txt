@@ -1,0 +1,15 @@
+# Whisper STT
+openai-whisper>=20231117
+
+# PyTorch (CPU-only build for smaller image; swap for cu118 wheel for GPU)
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# FastAPI server
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9
+
+# Utilities
+python-dotenv>=1.0.0
+numpy>=1.26.0
