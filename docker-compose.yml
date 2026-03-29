@@ -13,6 +13,8 @@ services:
     environment:
       NODE_ENV: production
       PYTHONUNBUFFERED: 1
+      # Map DISCORD_TOKEN → DISCORD_BOT_TOKEN (bot reads DISCORD_BOT_TOKEN)
+      DISCORD_BOT_TOKEN: ${DISCORD_TOKEN:-}
     volumes:
       - ./logs:/app/logs
     networks:
@@ -21,11 +23,11 @@ services:
       - "3000:3000"
       - "8000:8000"
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      test: ["CMD-SHELL", "pgrep -f 'node.*index.js' > /dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 30s
     develop:
       watch:
         - action: sync

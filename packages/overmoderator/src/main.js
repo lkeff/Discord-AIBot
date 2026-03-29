@@ -140,14 +140,13 @@ async function cleanupOldConversations() {
 }
 */
 
-// 連接數據庫並初始化 - TODO: Complete PostgreSQL migration
+// 連接數據庫並初始化
 if (process.env.OFFLINE_MODE === 'true') {
     console.log('Running in offline mode. Skipping database connection and Discord login.');
 } else {
-    // TODO: PostgreSQL migration incomplete - running without database
+    // PostgreSQL migration incomplete — running without database persistence
     console.log('[INFO] PostgreSQL migration incomplete, running without database persistence');
 
-    // Initialize without database
     initializeMongo()
         .then(() => initializeUserSettings())
         .then(() => {
@@ -156,7 +155,7 @@ if (process.env.OFFLINE_MODE === 'true') {
                 ███╗   ██╗██╗██████╗  █████╗      █████╗ ██╗
                 ████╗  ██║██║██╔══██╗██╔══██╗    ██╔══██╗██║
                 ██╔██╗ ██║██║██████╔╝███████║    ███████║██║
-                ██║╚██╗██║██║██╔══██╗██╔══██║    ██╔══██║██║
+                ██║╚██╗██║██║██╔══██╗██╔══██╗    ██╔══██║██║
                 ██║ ╚████║██║██████╔╝██║  ██║    ██║  ██║██║
                 ╚═╝  ╚═══╝╚═╝╚═════╝ ╚═╝  ╚═╝    ╚═╝  ╚═╝╚═╝
                 `);
@@ -181,26 +180,8 @@ if (process.env.OFFLINE_MODE === 'true') {
             console.error('初始化錯誤:', error);
             process.exit(1);
         });
-
-    if (!process.env.PGHOST || !process.env.PGUSER || !process.env.PGDATABASE) {
-        console.error('Missing Postgres configuration (PGHOST, PGUSER, PGDATABASE)');
-        process.exit(1);
-    }
-
-    pool.connect()
-        .then(async (clientConn) => {
-            clientConn.release();
-            console.log("成功連接到 Postgres 數據庫");
-            setInterval(cleanupOldConversations, 3 * 24 * 60 * 60 * 1000);
-            
-            await initializeUserSettings();
-            // ... rest of original code
-        })
-        .catch(error => {
-            console.error('數據庫連接錯誤:', error);
-            process.exit(1);
-        });
 }
+
 // Conversation / passiar mode
 client.passiarChannels = new Set();   // channels with always-on conversation mode
 client.passiarUsers = new Set();      // users with always-on conversation mode

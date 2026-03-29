@@ -37,7 +37,8 @@ LABEL maintainer="bot-team" \
       description="Discord AI Bot - Production"
 
 # Install runtime dependencies only
-RUN apk add --no-cache ffmpeg opus ca-certificates
+# procps provides pgrep for the health check
+RUN apk add --no-cache ffmpeg opus ca-certificates procps
 
 # Create non-root user for security
 RUN addgroup botuser && adduser -D -G botuser botuser
@@ -63,9 +64,9 @@ ENV NODE_ENV=production \
 
 EXPOSE 3000 8000
 
-# Improved health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})" || exit 1
+# Process-based health check (bot has no HTTP server)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD pgrep -f "node.*index.js" > /dev/null || exit 1
 
 # Switch to non-root user
 USER botuser
