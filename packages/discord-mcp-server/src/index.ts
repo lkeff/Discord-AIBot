@@ -1,19 +1,19 @@
-import 'dotenv/config';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import "dotenv/config";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
+  ChannelType,
   Client,
   GatewayIntentBits,
   TextChannel,
-  ChannelType,
-} from 'discord.js';
-import * as http from 'http';
+} from "discord.js";
+import * as http from "http";
 
 let discordClient: Client | null = null;
 
 function getToken(): string {
-  const token = (process.env.DISCORD_TOKEN || '').trim();
-  if (!token) throw new Error('Missing DISCORD_TOKEN environment variable.');
+  const token = (process.env.DISCORD_TOKEN ?? "").trim();
+  if (!token) throw new Error("Missing DISCORD_TOKEN environment variable.");
   return token;
 }
 
@@ -28,112 +28,149 @@ async function getClient(): Promise<Client> {
     ],
   });
   await client.login(getToken());
-  await new Promise<void>((resolve) => client.once('ready', () => resolve()));
+  await new Promise<void>((resolve) => client.once("ready", () => resolve()));
   discordClient = client;
   return client;
 }
 
-async function main(): Promise<void> {
-  const server = new McpServer({ name: 'discord-mcp', version: '1.0.0' });
-  const tool: any = (server as any).tool?.bind(server);
+// Helpers to keep tool handlers concise
+function ok(data: unknown) {
+  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+}
+function fail(error: unknown) {
+  return ok({ success: false, error: String(error) });
+}
 
-  // HTTP health endpoint
-  const port = parseInt(process.env.MCP_PORT || '4000', 10);
+async function main(): Promise<void> {
+  const server = new McpServer({ name: "discord-mcp", version: "1.0.0" });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tool: (...args: any[]) => void = (server as any).tool?.bind(server);
+
+  // ── HTTP health endpoint ──────────────────────────────────────────────────
+  const port = parseInt(process.env.MCP_PORT ?? "4000", 10);
   const httpServer = http.createServer((req, res) => {
-    if (req.url === '/health') {
+    if (req.url === "/health") {
       const ready = discordClient?.isReady() ?? false;
-      res.writeHead(ready ? 200 : 503, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: ready ? 'ok' : 'starting', bot: discordClient?.user?.tag ?? null }));
+      res.writeHead(ready ? 200 : 503, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          status: ready ? "ok" : "starting",
+          bot: discordClient?.user?.tag ?? null,
+        }),
+      );
     } else {
       res.writeHead(404);
       res.end();
     }
   });
-  httpServer.listen(port, () => console.log(`discord-mcp HTTP health on :${port}`));
+  httpServer.listen(port, () =>
+    console.log(`discord-mcp HTTP health on :${port}`),
+  );
+
+  // ── Tools ─────────────────────────────────────────────────────────────────
 
   tool(
-    'discord_list_guilds',
-    { description: 'List all Discord guilds the bot is in', inputSchema: { type: 'object', properties: {}, required: [] } },
+    "discord_list_guilds",
+    {
+      description: "List all Discord guilds (servers) the bot is in",
+      inputSchema: { type: "object", properties: {}, required: [] },
+    },
     async () => {
       try {
         const client = await getClient();
-        const guilds = client.guilds.cache.map((g) => ({ id: g.id, name: g.name, memberCount: g.memberCount }));
-        return { content: [{ type: 'text', text: JSON.stringify({ success: true, guilds }, null, 2) }] };
+        const guilds = client.guilds.cache.map((g) => ({
+          id: g.id,
+          name: g.name,
+          memberCount: g.memberCount,
+        }));
+        return ok({ success: true, guilds });
       } catch (error) {
-        return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: String(error) }, null, 2) }] };
+        return fail(error);
       }
-    }
+    },
   );
 
   tool(
-    'discord_send_message',
+    "discord_send_message",
     {
-      description: 'Send a message to a Discord text channel',
+      description: "Send a message to a Discord text channel",
       inputSchema: {
-        type: 'object',
+        type: "object",
         properties: {
-          channelId: { type: 'string', description: 'Discord channel ID' },
-          content: { type: 'string', description: 'Message text' },
+          channelId: { type: "string", description: "Discord channel ID" },
+          content: { type: "string", description: "Message text" },
         },
-        required: ['channelId', 'content'],
+        required: ["channelId", "content"],
       },
     },
     async ({ channelId, content }: { channelId: string; content: string }) => {
       try {
         const client = await getClient();
         const channel = await client.channels.fetch(channelId);
-        if (!channel?.isTextBased()) throw new Error('Not a text channel');
+        if (!channel?.isTextBased()) throw new Error("Not a text channel");
         const msg = await (channel as TextChannel).send(content);
-        return { content: [{ type: 'text', text: JSON.stringify({ success: true, messageId: msg.id, channelId }, null, 2) }] };
+        return ok({ success: true, messageId: msg.id, channelId });
       } catch (error) {
-        return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: String(error) }, null, 2) }] };
+        return fail(error);
       }
-    }
+    },
   );
 
   tool(
-    'discord_read_channel',
+    "discord_read_channel",
     {
-      description: 'Read recent messages from a Discord channel',
+      description: "Read recent messages from a Discord channel",
       inputSchema: {
-        type: 'object',
+        type: "object",
         properties: {
-          channelId: { type: 'string' },
-          limit: { type: 'number', description: 'Max messages to return (1-50)', default: 10 },
+          channelId: { type: "string" },
+          limit: {
+            type: "number",
+            description: "Max messages to return (1-50)",
+            default: 10,
+          },
         },
-        required: ['channelId'],
+        required: ["channelId"],
       },
     },
-    async ({ channelId, limit = 10 }: { channelId: string; limit?: number }) => {
+    async ({
+      channelId,
+      limit = 10,
+    }: {
+      channelId: string;
+      limit?: number;
+    }) => {
       try {
         const client = await getClient();
         const channel = await client.channels.fetch(channelId);
-        if (!channel?.isTextBased()) throw new Error('Not a text channel');
-        const msgs = await (channel as TextChannel).messages.fetch({ limit: Math.min(limit, 50) });
+        if (!channel?.isTextBased()) throw new Error("Not a text channel");
+        const msgs = await (channel as TextChannel).messages.fetch({
+          limit: Math.min(limit, 50),
+        });
         const messages = msgs.map((m) => ({
           id: m.id,
           author: m.author.tag,
           content: m.content,
           timestamp: m.createdAt.toISOString(),
         }));
-        return { content: [{ type: 'text', text: JSON.stringify({ success: true, channelId, messages }, null, 2) }] };
+        return ok({ success: true, channelId, messages });
       } catch (error) {
-        return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: String(error) }, null, 2) }] };
+        return fail(error);
       }
-    }
+    },
   );
 
   tool(
-    'discord_get_member',
+    "discord_get_member",
     {
-      description: 'Get info about a guild member',
+      description: "Get info about a guild member",
       inputSchema: {
-        type: 'object',
+        type: "object",
         properties: {
-          guildId: { type: 'string' },
-          userId: { type: 'string' },
+          guildId: { type: "string" },
+          userId: { type: "string" },
         },
-        required: ['guildId', 'userId'],
+        required: ["guildId", "userId"],
       },
     },
     async ({ guildId, userId }: { guildId: string; userId: string }) => {
@@ -141,146 +178,228 @@ async function main(): Promise<void> {
         const client = await getClient();
         const guild = await client.guilds.fetch(guildId);
         const member = await guild.members.fetch(userId);
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              success: true,
-              member: {
-                id: member.id,
-                tag: member.user.tag,
-                nickname: member.nickname,
-                roles: member.roles.cache.map((r) => ({ id: r.id, name: r.name })),
-                joinedAt: member.joinedAt?.toISOString(),
-              },
-            }, null, 2),
-          }],
-        };
+        return ok({
+          success: true,
+          member: {
+            id: member.id,
+            tag: member.user.tag,
+            nickname: member.nickname,
+            roles: member.roles.cache.map((r) => ({ id: r.id, name: r.name })),
+            joinedAt: member.joinedAt?.toISOString(),
+          },
+        });
       } catch (error) {
-        return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: String(error) }, null, 2) }] };
+        return fail(error);
       }
-    }
+    },
   );
 
   tool(
-    'discord_create_channel',
+    "discord_create_channel",
     {
-      description: 'Create a text channel in a guild',
+      description: "Create a text channel in a guild",
       inputSchema: {
-        type: 'object',
+        type: "object",
         properties: {
-          guildId: { type: 'string' },
-          name: { type: 'string' },
-          topic: { type: 'string', description: 'Channel topic (optional)' },
+          guildId: { type: "string" },
+          name: { type: "string" },
+          topic: { type: "string", description: "Channel topic (optional)" },
         },
-        required: ['guildId', 'name'],
+        required: ["guildId", "name"],
       },
     },
-    async ({ guildId, name, topic }: { guildId: string; name: string; topic?: string }) => {
+    async ({
+      guildId,
+      name,
+      topic,
+    }: {
+      guildId: string;
+      name: string;
+      topic?: string;
+    }) => {
       try {
         const client = await getClient();
         const guild = await client.guilds.fetch(guildId);
-        const channel = await guild.channels.create({ name, topic, type: ChannelType.GuildText });
-        return { content: [{ type: 'text', text: JSON.stringify({ success: true, channelId: channel.id, name: channel.name }, null, 2) }] };
+        const channel = await guild.channels.create({
+          name,
+          topic,
+          type: ChannelType.GuildText,
+        });
+        return ok({ success: true, channelId: channel.id, name: channel.name });
       } catch (error) {
-        return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: String(error) }, null, 2) }] };
+        return fail(error);
       }
-    }
+    },
   );
 
   tool(
-    'discord_add_role',
+    "discord_add_role",
     {
-      description: 'Add a role to a guild member',
-      inputSchema: { type: 'object', properties: { guildId: { type: 'string' }, userId: { type: 'string' }, roleId: { type: 'string' } }, required: ['guildId', 'userId', 'roleId'] },
+      description: "Add a role to a guild member",
+      inputSchema: {
+        type: "object",
+        properties: {
+          guildId: { type: "string" },
+          userId: { type: "string" },
+          roleId: { type: "string" },
+        },
+        required: ["guildId", "userId", "roleId"],
+      },
     },
-    async ({ guildId, userId, roleId }: { guildId: string; userId: string; roleId: string }) => {
+    async ({
+      guildId,
+      userId,
+      roleId,
+    }: {
+      guildId: string;
+      userId: string;
+      roleId: string;
+    }) => {
       try {
         const client = await getClient();
-        const member = await (await client.guilds.fetch(guildId)).members.fetch(userId);
+        const guild = await client.guilds.fetch(guildId);
+        const member = await guild.members.fetch(userId);
         await member.roles.add(roleId);
-        return { content: [{ type: 'text', text: JSON.stringify({ success: true, userId, roleId }, null, 2) }] };
+        return ok({ success: true, userId, roleId });
       } catch (error) {
-        return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: String(error) }, null, 2) }] };
+        return fail(error);
       }
-    }
-  );
-
-  tool(
-    'discord_remove_role',
-    {
-      description: 'Remove a role from a guild member',
-      inputSchema: { type: 'object', properties: { guildId: { type: 'string' }, userId: { type: 'string' }, roleId: { type: 'string' } }, required: ['guildId', 'userId', 'roleId'] },
     },
-    async ({ guildId, userId, roleId }: { guildId: string; userId: string; roleId: string }) => {
-      try {
-        const client = await getClient();
-        const member = await (await client.guilds.fetch(guildId)).members.fetch(userId);
-        await member.roles.remove(roleId);
-        return { content: [{ type: 'text', text: JSON.stringify({ success: true, userId, roleId }, null, 2) }] };
-      } catch (error) {
-        return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: String(error) }, null, 2) }] };
-      }
-    }
   );
 
   tool(
-    'discord_kick_member',
+    "discord_remove_role",
     {
-      description: 'Kick a member from a guild',
-      inputSchema: { type: 'object', properties: { guildId: { type: 'string' }, userId: { type: 'string' }, reason: { type: 'string' } }, required: ['guildId', 'userId'] },
-    },
-    async ({ guildId, userId, reason }: { guildId: string; userId: string; reason?: string }) => {
-      try {
-        const client = await getClient();
-        const member = await (await client.guilds.fetch(guildId)).members.fetch(userId);
-        await member.kick(reason);
-        return { content: [{ type: 'text', text: JSON.stringify({ success: true, kicked: userId, reason }, null, 2) }] };
-      } catch (error) {
-        return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: String(error) }, null, 2) }] };
-      }
-    }
-  );
-
-  tool(
-    'discord_ban_member',
-    {
-      description: 'Ban a member from a guild',
+      description: "Remove a role from a guild member",
       inputSchema: {
-        type: 'object',
+        type: "object",
         properties: {
-          guildId: { type: 'string' },
-          userId: { type: 'string' },
-          reason: { type: 'string' },
-          deleteMessageDays: { type: 'number', description: 'Days of messages to delete (0-7)', default: 0 },
+          guildId: { type: "string" },
+          userId: { type: "string" },
+          roleId: { type: "string" },
         },
-        required: ['guildId', 'userId'],
+        required: ["guildId", "userId", "roleId"],
       },
     },
-    async ({ guildId, userId, reason, deleteMessageDays = 0 }: { guildId: string; userId: string; reason?: string; deleteMessageDays?: number }) => {
+    async ({
+      guildId,
+      userId,
+      roleId,
+    }: {
+      guildId: string;
+      userId: string;
+      roleId: string;
+    }) => {
       try {
         const client = await getClient();
         const guild = await client.guilds.fetch(guildId);
-        await guild.members.ban(userId, { reason, deleteMessageSeconds: Math.min(deleteMessageDays, 7) * 86400 });
-        return { content: [{ type: 'text', text: JSON.stringify({ success: true, banned: userId, reason }, null, 2) }] };
+        const member = await guild.members.fetch(userId);
+        await member.roles.remove(roleId);
+        return ok({ success: true, userId, roleId });
       } catch (error) {
-        return { content: [{ type: 'text', text: JSON.stringify({ success: false, error: String(error) }, null, 2) }] };
+        return fail(error);
       }
-    }
+    },
   );
+
+  tool(
+    "discord_kick_member",
+    {
+      description: "Kick a member from a guild",
+      inputSchema: {
+        type: "object",
+        properties: {
+          guildId: { type: "string" },
+          userId: { type: "string" },
+          reason: { type: "string" },
+        },
+        required: ["guildId", "userId"],
+      },
+    },
+    async ({
+      guildId,
+      userId,
+      reason,
+    }: {
+      guildId: string;
+      userId: string;
+      reason?: string;
+    }) => {
+      try {
+        const client = await getClient();
+        const guild = await client.guilds.fetch(guildId);
+        const member = await guild.members.fetch(userId);
+        await member.kick(reason);
+        return ok({ success: true, kicked: userId, reason });
+      } catch (error) {
+        return fail(error);
+      }
+    },
+  );
+
+  tool(
+    "discord_ban_member",
+    {
+      description: "Ban a member from a guild",
+      inputSchema: {
+        type: "object",
+        properties: {
+          guildId: { type: "string" },
+          userId: { type: "string" },
+          reason: { type: "string" },
+          deleteMessageDays: {
+            type: "number",
+            description: "Days of messages to delete (0-7)",
+            default: 0,
+          },
+        },
+        required: ["guildId", "userId"],
+      },
+    },
+    async ({
+      guildId,
+      userId,
+      reason,
+      deleteMessageDays = 0,
+    }: {
+      guildId: string;
+      userId: string;
+      reason?: string;
+      deleteMessageDays?: number;
+    }) => {
+      try {
+        const client = await getClient();
+        const guild = await client.guilds.fetch(guildId);
+        await guild.members.ban(userId, {
+          reason,
+          deleteMessageSeconds: Math.min(deleteMessageDays, 7) * 86400,
+        });
+        return ok({ success: true, banned: userId, reason });
+      } catch (error) {
+        return fail(error);
+      }
+    },
+  );
+
+  // ── Connect & shutdown ────────────────────────────────────────────────────
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
   const shutdown = async () => {
-    try { await server.close(); } finally {
+    try {
+      await server.close();
+    } finally {
       httpServer.close();
       discordClient?.destroy();
       process.exit(0);
     }
   };
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
