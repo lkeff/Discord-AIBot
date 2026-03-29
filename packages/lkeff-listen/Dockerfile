@@ -1,26 +1,24 @@
+# syntax=docker/dockerfile:1
 FROM python:3.11-slim
 WORKDIR /app
 
-# System dependencies: ffmpeg for audio, libopus for voice, curl for healthchecks
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    libopus-dev \
-    libffi-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        ffmpeg \
+        libffi-dev \
+        libopus-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -m botuser
 
-# Install Python dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source (populated from lkeff/lkeff-listen)
-COPY . .
+COPY --chown=botuser:botuser . .
 
-# Create data directories
-RUN mkdir -p /app/data /app/logs /app/data/image_cache /app/models
+RUN mkdir -p /app/data /app/logs /app/data/image_cache /app/models \
+    && chown -R botuser:botuser /app/data /app/logs
 
-# Non-root user
-RUN useradd -m botuser && chown -R botuser:botuser /app
 USER botuser
 
 ENV PYTHONUNBUFFERED=1

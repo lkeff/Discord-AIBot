@@ -1,24 +1,28 @@
+# syntax=docker/dockerfile:1
 FROM python:3.11-slim
 WORKDIR /app
 
-# ffmpeg required by Whisper for audio decoding
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        ffmpeg \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -m sttuser
 
 COPY requirements.txt ./
-# Install torch CPU-only first to keep layer small, then the rest
-RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu && \
-    pip install --no-cache-dir -r requirements.txt
+# Install CPU-only PyTorch first (smaller wheel), then remaining deps
+RUN pip install --no-cache-dir \
+        torch \
+        torchaudio \
+        --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir -r requirements.txt
 
-COPY server.py ./
+COPY --chown=sttuser:sttuser server.py ./
 
-# Pre-download the default model at build time so the first request is fast
+# Pre-download the default model at build time for fast cold-start
 ARG WHISPER_MODEL=base
 RUN python -c "import whisper; whisper.load_model('${WHISPER_MODEL}')"
 
-RUN useradd -m sttuser && chown -R sttuser:sttuser /app
 USER sttuser
 
 ENV PYTHONUNBUFFERED=1 \
