@@ -12,20 +12,27 @@ services:
       - .env
     environment:
       NODE_ENV: production
-      PYTHONUNBUFFERED: 1
+      REDIS_URL: redis://redis:6379
+      SQLITE_PATH: /app/data/bot.db
     volumes:
+      - ./data/sqlite:/app/data
       - ./logs:/app/logs
     networks:
       - discord-network
     ports:
       - "3000:3000"
       - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health',(r)=>{if(r.statusCode!==200)throw new Error(r.statusCode)})"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 15s
     develop:
       watch:
         - action: sync
@@ -33,8 +40,12 @@ services:
           target: /app/src
         - action: rebuild
           path: ./package.json
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Sequential Thinking MCP Server - self-sufficient reasoning sidecar
   sequential-thinking-mcp:
     build:
       context: ./packages/sequential-thinking-mcp
@@ -51,7 +62,6 @@ services:
       NODE_ENV: production
     volumes:
       - mcp-sessions:/app/data
-      # Mount all bot source trees so MCP can scan/refactor
       - ./:/workspace/discord-aibot:ro
     networks:
       - discord-network
@@ -67,32 +77,175 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Optional: MongoDB for data persistence
-  mongodb:
-    image: mongo:7-alpine
-    container_name: discord-aibot-db
+  discord-mcp-server:
+    build:
+      context: ./packages/discord-mcp-server
+      dockerfile: Dockerfile
+    container_name: discord-mcp
+    image: discord-mcp-server:latest
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
-    volumes:
-      - mongo-data:/data/db
+      NODE_ENV: production
+      MCP_PORT: "4000"
+    ports:
+      - "4000:4000"
     networks:
       - discord-network
-    ports:
-      - "27017:27017"
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/health',(r)=>{if(r.statusCode!==200)throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  overmoderator:
+    build:
+      context: ./packages/overmoderator
+      dockerfile: Dockerfile
+    container_name: overmoderator
+    image: overmoderator:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+      WHISPER_STT_URL: http://whisper-stt:5000
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - discord-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      whisper-stt:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  lkeff-listen:
+    build:
+      context: ./packages/lkeff-listen
+      dockerfile: Dockerfile
+    container_name: lkeff-listen
+    image: lkeff-listen:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379
+      SQLITE_PATH: /app/data/bot.db
+      WHISPER_STT_URL: http://whisper-stt:5000
+    volumes:
+      - ./data/sqlite:/app/data
+      - ./logs:/app/logs
+    networks:
+      - discord-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      whisper-stt:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  whisper-stt:
+    build:
+      context: ./packages/whisper-stt
+      dockerfile: Dockerfile
+    container_name: whisper-stt
+    image: whisper-stt:latest
+    restart: unless-stopped
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-base}
+    ports:
+      - "5000:5000"
+    volumes:
+      - whisper-models:/app/models
+    networks:
+      - discord-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: discord-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - discord-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: discord-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-botuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-calm_bot}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - discord-network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-botuser} -d ${DB_NAME:-calm_bot}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
 
 networks:
   discord-network:
     driver: bridge
 
 volumes:
-  mongo-data:
+  redis-data:
+    driver: local
+  postgres-data:
     driver: local
   mcp-sessions:
+    driver: local
+  whisper-models:
     driver: local
