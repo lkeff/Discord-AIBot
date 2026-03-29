@@ -13,6 +13,9 @@ services:
     environment:
       NODE_ENV: production
       PYTHONUNBUFFERED: 1
+      # AI Assistant - explicitly enabled
+      ENABLE_AUDIO: "true"
+      ENABLE_VOICE: "true"
     volumes:
       - ./logs:/app/logs
     networks:
