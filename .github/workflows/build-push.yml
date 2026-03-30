@@ -22,6 +22,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
 
     steps:
       - name: Checkout code
@@ -50,6 +52,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
+        id: push
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -85,10 +88,113 @@ jobs:
       - name: Run linter
         run: pnpm run lint
 
-      - name: Run tests
+      - name: Run tests (includes @discord-aibot/low-ping)
         run: pnpm run test:ci
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
           files: ./coverage/coverage-final.json
+
+  trivy-scan:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy filesystem scan (SCA + secrets)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+
+      - name: Run Trivy image scan
+        if: github.event_name != 'pull_request'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: true
+
+  sign:
+    runs-on: ubuntu-latest
+    needs: [build, trivy-scan]
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Sign image with keyless Cosign (OIDC)
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [build, trivy-scan, sign]
+    if: always() && github.event_name != 'pull_request'
+
+    steps:
+      - name: Determine overall status
+        id: status
+        run: |
+          BUILD="${{ needs.build.result }}"
+          TRIVY="${{ needs.trivy-scan.result }}"
+          SIGN="${{ needs.sign.result }}"
+          if [[ "$BUILD" == "success" && "$TRIVY" == "success" && "$SIGN" == "success" ]]; then
+            echo "color=3066993" >> $GITHUB_OUTPUT
+            echo "title=✅ Build Passed" >> $GITHUB_OUTPUT
+          else
+            echo "color=15158332" >> $GITHUB_OUTPUT
+            echo "title=❌ Build Failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Discord notification
+        if: secrets.DISCORD_CI_WEBHOOK_URL != ''
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_CI_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"${{ steps.status.outputs.title }}\",
+                \"description\": \"**Repo:** \`${{ github.repository }}\`\n**Branch:** \`${{ github.ref_name }}\`\n**Actor:** ${{ github.actor }}\n**Commit:** [\`${GITHUB_SHA::7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})\",
+                \"color\": ${{ steps.status.outputs.color }},
+                \"fields\": [
+                  {\"name\": \"Build\", \"value\": \"${{ needs.build.result }}\", \"inline\": true},
+                  {\"name\": \"Trivy\", \"value\": \"${{ needs.trivy-scan.result }}\", \"inline\": true},
+                  {\"name\": \"Sign\", \"value\": \"${{ needs.sign.result }}\", \"inline\": true}
+                ]
+              }]
+            }"

@@ -21,6 +21,7 @@
     "docker:logs": "docker-compose logs -f"
   },
   "dependencies": {
+    "@discord-aibot/low-ping": "workspace:*",
     "@derockdev/discord-components-react": "^3.6.1",
     "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.19.0",
