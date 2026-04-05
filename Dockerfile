@@ -1,6 +1,10 @@
 # Multi-stage build for Discord-AIBot - Production Optimized
 FROM node:20-alpine AS builder
 
+ARG GIT_COMMIT=unknown
+ARG GIT_BRANCH=unknown
+ARG BUILD_DATE=unknown
+
 WORKDIR /app
 
 # Install build dependencies
@@ -12,6 +16,8 @@ COPY package*.json pnpm-lock.yaml ./
 # Install dependencies with pnpm via corepack (built into Node 20, honors packageManager field)
 RUN corepack enable && corepack prepare pnpm@10.0.0 --activate && \
     pnpm install --frozen-lockfile
+
+RUN npm audit --production --audit-level=high || true
 
 # Copy source code
 COPY . .
@@ -29,6 +35,10 @@ RUN pnpm prune --prod
 # Production stage - minimal image
 # ─────────────────────────────────────────
 FROM node:20-alpine
+
+ENV GIT_COMMIT=$GIT_COMMIT \
+    GIT_BRANCH=$GIT_BRANCH \
+    BUILD_DATE=$BUILD_DATE
 
 WORKDIR /app
 
