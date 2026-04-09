@@ -53,6 +53,76 @@ app.get('/get-disk-space', (req, res) => {
     });
 });
 
+// ── Bluetooth endpoints ────────────────────────────────────────────────────────
+
+app.get('/bluetooth-status', (req, res) => {
+    const command = 'Get-Service bthserv | Select-Object Name, Status | ConvertTo-Json -Compress';
+    exec(command, { shell: 'powershell.exe' }, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`bluetooth-status error: ${error}`);
+            return res.status(500).send({ error: error.message, stderr });
+        }
+        try {
+            res.send(JSON.parse(stdout));
+        } catch {
+            res.send({ raw: stdout });
+        }
+    });
+});
+
+app.get('/bluetooth-devices', (req, res) => {
+    const command = "Get-PnpDevice -Class Bluetooth | Select-Object Status, FriendlyName, InstanceId | ConvertTo-Json -Compress";
+    exec(command, { shell: 'powershell.exe' }, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`bluetooth-devices error: ${error}`);
+            return res.status(500).send({ error: error.message, stderr });
+        }
+        try {
+            const raw = JSON.parse(stdout);
+            res.send({ devices: Array.isArray(raw) ? raw : [raw] });
+        } catch {
+            res.send({ devices: [], raw: stdout });
+        }
+    });
+});
+
+app.post('/bluetooth-connect', (req, res) => {
+    const { instanceId } = req.body as { instanceId?: string };
+    if (!instanceId) {
+        return res.status(400).send({ error: 'instanceId is required' });
+    }
+    // Sanitise: allow only alphanumeric, backslashes, hyphens, underscores, braces and &
+    if (!/^[\w\\{}\-&# ]+$/.test(instanceId)) {
+        return res.status(400).send({ error: 'Invalid instanceId format' });
+    }
+    const command = `pnputil /enable-device "${instanceId}"`;
+    exec(command, { shell: 'powershell.exe' }, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`bluetooth-connect error: ${error}`);
+            return res.status(500).send({ error: error.message, stderr });
+        }
+        res.send({ message: 'Device enable command executed.', stdout, stderr });
+    });
+});
+
+app.post('/bluetooth-disconnect', (req, res) => {
+    const { instanceId } = req.body as { instanceId?: string };
+    if (!instanceId) {
+        return res.status(400).send({ error: 'instanceId is required' });
+    }
+    if (!/^[\w\\{}\-&# ]+$/.test(instanceId)) {
+        return res.status(400).send({ error: 'Invalid instanceId format' });
+    }
+    const command = `pnputil /disable-device "${instanceId}"`;
+    exec(command, { shell: 'powershell.exe' }, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`bluetooth-disconnect error: ${error}`);
+            return res.status(500).send({ error: error.message, stderr });
+        }
+        res.send({ message: 'Device disable command executed.', stdout, stderr });
+    });
+});
+
 app.listen(port, () => {
   console.log(`Windows agent listening at http://localhost:${port}`);
 });
